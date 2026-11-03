@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biodigestor: monitoreo en tiempo real</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     Diseño: una hoja de pizarrón (gris frío) con tinta azul de
+     marcador. Los colores de estado son los únicos "vivos".
+     ============================================================ */
+  :root {
+    --pizarron: #E4E9EC;
+    --tablero: #F7F9FA;
+    --marco: #C7D0D6;
+    --linea: #C5CED4;
+    --tinta: #14213F;
+    --tinta-suave: #4A5673;
+    --marcador: #2447C4;
+    --gas: #0E8A6E;
+
+    --ok: #1F8A5B;        --ok-tx: #17643F;        --ok-bg: #9FD4B8;
+    --alerta: #E0A100;    --alerta-tx: #7A5200;    --alerta-bg: #F2D48A;
+    --critico: #D0382A;   --critico-tx: #A82016;   --critico-bg: #F0B4AD;
+    --sindato: #7C8790;   --sindato-tx: #55606A;
+    --info: #2447C4;      --info-tx: #1B379A;
+
+    --fuente: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+    --fuente-num: 'Barlow Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  }
+
+  /* Cada elemento con data-nivel toma su color de estado */
+  [data-nivel="ok"]      { --c: var(--ok);      --ctx: var(--ok-tx); }
+  [data-nivel="alerta"]  { --c: var(--alerta);  --ctx: var(--alerta-tx); }
+  [data-nivel="critico"] { --c: var(--critico); --ctx: var(--critico-tx); }
+  [data-nivel="sindato"] { --c: var(--sindato); --ctx: var(--sindato-tx); }
+  [data-nivel="info"]    { --c: var(--info);    --ctx: var(--info-tx); }
+
+  [hidden] { display: none !important; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--pizarron); color: var(--tinta); font: 400 17px/1.5 var(--fuente); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--marcador); outline-offset: 2px; }
+
+  .pagina { max-width: 1240px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 48px) 72px; }
+
+  h1 { margin: 0; font: 700 clamp(36px, 6vw, 54px)/1 var(--fuente-num); letter-spacing: .01em; color: var(--marcador); }
+  h2 { margin: 0 0 14px; font: 600 26px/1.1 var(--fuente-num); letter-spacing: .01em; }
+  .sub { margin: 6px 0 0; color: var(--tinta-suave); font-size: 18px; }
+  .nota { margin: 0 0 14px; color: var(--tinta-suave); font-size: 15px; }
+
+  /* ---------- Cabecera ---------- */
+  .cabecera { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
+  .conexion-caja { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; color: var(--tinta-suave); font-size: 15px; }
+  .conexion { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px 5px 10px; border: 1.5px solid var(--c); border-radius: 999px; background: var(--tablero); color: var(--ctx); font-weight: 600; }
+  .conexion i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+
+  /* ---------- Aviso de alarma ---------- */
+  .aviso { margin: 0 0 28px; padding: 14px 18px; border-left: 8px solid var(--c); border-radius: 6px; background: #F7E3B0; font-size: 18px; }
+  .aviso[data-nivel="critico"] { background: #F6CFCA; }
+
+  /* ---------- Esquema + lecturas ---------- */
+  .principal { display: grid; gap: 32px; grid-template-columns: minmax(0, 1.3fr) minmax(320px, .9fr); align-items: start; }
+  @media (max-width: 1000px) { .principal { grid-template-columns: minmax(0, 1fr); } }
+
+  .tablero { background: var(--tablero); border: 8px solid var(--marco); border-radius: 8px; padding: 12px; }
+  .lienzo { position: relative; aspect-ratio: 640 / 420; container-type: inline-size; }
+  .lienzo svg { display: block; width: 100%; height: 100%; }
+
+  /* Dibujo estilo marcador */
+  .dibujo { stroke: var(--marcador); }
+  .dibujo .rell { fill: var(--tablero); }
+  .dibujo .liq { fill: #CFE0F7; stroke: none; }
+  .dibujo .sed { fill: url(#rayas); stroke: none; }
+  .dibujo .punto { fill: var(--marcador); stroke: none; }
+  .dibujo .gas { stroke: var(--gas); }
+  .rotulos text { font: 500 14px var(--fuente); fill: var(--tinta-suave); }
+  .lideres line { stroke: var(--marcador); stroke-width: 1.4; stroke-dasharray: 4 3; }
+  .lideres circle { fill: var(--marcador); }
+
+  /* Etiquetas de sensor sobre el esquema */
+  .tag { position: absolute; display: flex; min-width: 92px; transform: translate(-50%, -50%); background: var(--tablero); border: 1.5px solid var(--marcador); border-radius: 5px; overflow: hidden; }
+  .tag::before { content: ""; flex: none; width: 6px; background: var(--c); }
+  .tag-texto { display: flex; flex-direction: column; padding: 3px 9px 4px; line-height: 1.1; white-space: nowrap; }
+  .tag-etq { font-size: 13px; font-weight: 500; color: var(--tinta-suave); }
+  .tag-val { font: 600 22px/1.1 var(--fuente-num); font-variant-numeric: tabular-nums; }
+  .tag.sel { outline: 3px solid var(--marcador); outline-offset: 2px; }
+  .tag[data-nivel="critico"] { animation: pulso 1.6s ease-out infinite; }
+  @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(208, 56, 42, .55); } 100% { box-shadow: 0 0 0 12px rgba(208, 56, 42, 0); } }
+
+  /* En pantallas angostas las etiquetas pasan a ser puntos de color */
+  @container (max-width: 540px) {
+    .tag { min-width: 0; width: 24px; height: 24px; border: 4px solid var(--c); border-radius: 50%; }
+    .tag::before, .tag-texto { display: none; }
+  }
+
+  /* Filas de lectura */
+  .filas { border-top: 1px solid var(--linea); }
+  .fila { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; column-gap: 16px; row-gap: 6px; align-items: center; width: 100%; margin: 0; padding: 14px 10px 14px 0; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0; }
+  button.fila { cursor: pointer; }
+  button.fila:hover { background: rgba(36, 71, 196, .05); }
+  button.fila[aria-pressed="true"] { background: rgba(36, 71, 196, .09); }
+  .barra { grid-row: 1 / -1; grid-column: 1; align-self: stretch; background: var(--c); border-radius: 3px; }
+  .nombre { grid-column: 2; grid-row: 1; font-weight: 600; font-size: 18px; line-height: 1.2; }
+  .linea-estado { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 2px; font-size: 15px; font-weight: 500; }
+  .estado { color: var(--ctx); }
+  .estado:empty { display: none; }
+  .edad { color: var(--tinta-suave); font-weight: 400; }
+  .valor { grid-column: 3; grid-row: 1; text-align: right; white-space: nowrap; }
+  .valor b { font: 600 40px/1 var(--fuente-num); font-variant-numeric: tabular-nums; }
+  .valor i { margin-left: 4px; font-style: normal; font-size: 16px; color: var(--tinta-suave); }
+  .fila[data-tipo="estado"] .valor b, .fila[data-tipo="alarma"] .valor b { font-size: 30px; color: var(--ctx); }
+  .fila[data-nivel="sindato"] .valor b { color: var(--sindato-tx); }
+
+  .medidor { grid-column: 2 / -1; grid-row: 2; position: relative; height: 10px; margin-top: 6px; border-radius: 5px; background: var(--critico-bg); }
+  .medidor .z-alerta, .medidor .z-ok { position: absolute; top: 0; bottom: 0; }
+  .medidor .z-alerta { background: var(--alerta-bg); }
+  .medidor .z-ok { background: var(--ok-bg); }
+  .aguja { position: absolute; top: -5px; width: 4px; height: 20px; margin-left: -2px; background: var(--tinta); border: 1px solid var(--tablero); border-radius: 2px; transition: left .6s ease; }
+  .extremos { grid-column: 2 / -1; grid-row: 3; display: flex; justify-content: space-between; font-size: 13px; color: var(--tinta-suave); }
+
+  /* ---------- Secciones inferiores ---------- */
+  .seccion { margin-top: 52px; }
+  .seccion-cab { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .seccion-cab h2 { margin: 0; }
+  .controles { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+  .segmento { display: inline-flex; border: 1.5px solid var(--marcador); border-radius: 7px; overflow: hidden; background: var(--tablero); }
+  .segmento button { padding: 6px 14px; border: 0; border-right: 1.5px solid var(--marcador); background: none; font-weight: 500; cursor: pointer; }
+  .segmento button:last-child { border-right: 0; }
+  .segmento button[aria-pressed="true"] { background: var(--marcador); color: #fff; }
+  .segmento button:focus-visible { outline-offset: -3px; }
+
+  .grafica { background: var(--tablero); border: 1px solid var(--linea); border-radius: 8px; padding: 8px; }
+  .grafica svg { display: block; width: 100%; }
+  .grafica text { font: 400 13px var(--fuente); fill: var(--tinta-suave); }
+  .gz-crit { fill: var(--critico-bg); opacity: .5; }
+  .gz-alerta { fill: var(--alerta-bg); opacity: .7; }
+  .gz-ok { fill: var(--ok-bg); opacity: .7; }
+  .g-rejilla { stroke: var(--linea); stroke-width: 1; }
+  .g-linea { fill: none; stroke: var(--marcador); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+  .g-punto { fill: var(--marcador); stroke: var(--tablero); stroke-width: 2; }
+  .g-valor { font: 600 16px var(--fuente-num) !important; fill: var(--tinta) !important; }
+  .leyenda { margin: 10px 2px 0; color: var(--tinta-suave); font-size: 15px; }
+
+  .pie { display: grid; gap: 44px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+  .bitacora ul { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow: auto; border-top: 1px solid var(--linea); }
+  .bitacora li { display: grid; grid-template-columns: auto 12px 1fr; gap: 12px; align-items: baseline; padding: 9px 4px; border-bottom: 1px solid var(--linea); }
+  .bitacora time { font: 600 17px var(--fuente-num); font-variant-numeric: tabular-nums; color: var(--tinta-suave); }
+  .bitacora li i { align-self: center; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+
+  .lista-check { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--linea); }
+  .lista-check li { border-bottom: 1px solid var(--linea); }
+  .lista-check label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 4px; cursor: pointer; }
+  .lista-check input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--marcador); }
+  .check-pie { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; color: var(--tinta-suave); font-size: 15px; }
+
+  .boton { padding: 10px 18px; border: 0; border-radius: 6px; background: var(--marcador); color: #fff; font-weight: 600; cursor: pointer; }
+  .boton:hover { background: #1B379A; }
+  .boton-sec { padding: 8px 14px; border: 1.5px solid var(--marcador); border-radius: 6px; background: var(--tablero); font-weight: 500; cursor: pointer; }
+  .boton-sec[aria-pressed="true"] { background: var(--marcador); color: #fff; }
+
+  .demo { padding: 18px 20px; border: 2px dashed var(--marcador); border-radius: 8px; }
+  .demo h2 { font-size: 22px; margin-bottom: 4px; }
+  .demo-botones { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tag[data-nivel="critico"] { animation: none; }
+    .aguja { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+
+  <header class="cabecera">
+    <div>
+      <h1>Biodigestor</h1>
+      <p class="sub">Monitoreo en tiempo real</p>
+    </div>
+    <div class="conexion-caja">
+      <span id="conexion" class="conexion" data-nivel="sindato"><i></i><span id="conexion-texto">Conectando</span></span>
+      <span id="ultima">Sin lecturas todavía</span>
+    </div>
+  </header>
+
+  <div id="aviso" class="aviso" role="alert" hidden></div>
+
+  <main>
+    <div class="principal">
+
+      <section aria-labelledby="t-esquema">
+        <h2 id="t-esquema">Esquema del sistema</h2>
+        <p class="nota">Toca una lectura de temperatura, pH o presión para ver su tendencia.</p>
+        <div class="tablero">
+          <div class="lienzo">
+            <svg viewBox="0 0 640 420" role="img" aria-label="Esquema del biodigestor: tolva, bomba, tanque digestor y línea de biogás con sus sensores">
+              <defs>
+                <!-- Da el temblor de trazo de marcador a los dibujos -->
+                <filter id="marcador" x="-5%" y="-5%" width="110%" height="110%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="ruido"/>
+                  <feDisplacementMap in="SourceGraphic" in2="ruido" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
+                </filter>
+                <pattern id="rayas" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="7" style="stroke:#2447C4;stroke-width:1.6"/>
+                </pattern>
+              </defs>
+
+              <g class="dibujo" filter="url(#marcador)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Suelo -->
+                <path d="M16 340H624"/>
+                <path d="M44 340l-9 11M92 340l-9 11M140 340l-9 11M188 340l-9 11M236 340l-9 11M284 340l-9 11M332 340l-9 11M380 340l-9 11M428 340l-9 11M476 340l-9 11M524 340l-9 11M572 340l-9 11" stroke-width="1.6" opacity=".55"/>
+
+                <!-- Base de la tolva -->
+                <rect class="rell" x="66" y="148" width="78" height="192" rx="3"/>
+                <!-- Tolva -->
+                <path class="liq" d="M52 92H158L128 148H82Z"/>
+                <path class="rell" style="fill:none" d="M40 70H170L128 148H82Z"/>
+                <path d="M53 92q8-6 16 0t16 0t16 0t16 0t16 0t16 0" stroke-width="2"/>
+                <!-- Motor y agitador -->
+                <rect class="rell" x="93" y="28" width="24" height="20" rx="3"/>
+                <path d="M105 48V128M88 124H122"/>
+                <!-- Línea de alimentación y bomba -->
+                <path d="M105 148V250H161" stroke-width="3.4"/>
+                <circle class="rell" cx="176" cy="250" r="15"/>
+                <path d="M168 250h16M176 242v16" stroke-width="2"/>
+                <path d="M191 243H290M191 257H290"/>
+                <path d="M236 237v26M243 237v26" stroke-width="2"/>
+
+                <!-- Tanque digestor -->
+                <path class="liq" d="M291 216H439V340H291Z"/>
+                <path class="sed" d="M291 300H439V340H291Z"/>
+                <path d="M290 340V184a14 14 0 0 1 14-14H426a14 14 0 0 1 14 14V340"/>
+                <path d="M291 216q9-6 18 0t18 0t18 0t18 0t18 0t18 0t18 0t18 0" stroke-width="2"/>
+                <!-- Burbujas de gas -->
+                <g class="gas" stroke-width="2.2">
+                  <path d="M318 208q-7-7 0-14t0-14"/>
+                  <path d="M342 208q-7-7 0-14t0-14"/>
+                  <path d="M404 208q-7-7 0-14t0-14"/>
+                </g>
+                <!-- Sondas de temperatura y pH -->
+                <path d="M388 170V236"/><circle class="punto" cx="388" cy="236" r="4.5"/>
+                <path d="M420 170V282"/><circle class="punto" cx="420" cy="282" r="4.5"/>
+
+                <!-- Línea de biogás -->
+                <path class="gas" d="M365 170V90H606" stroke-width="5.5"/>
+                <path class="gas" d="M596 82L608 90L596 98" stroke-width="3"/>
+                <!-- Manómetro -->
+                <circle class="rell" cx="365" cy="122" r="14"/>
+                <path d="M365 122l7-8" stroke-width="2"/>
+                <!-- Válvula de gas -->
+                <path class="rell" d="M466 80L494 100V80L466 100Z"/>
+                <path d="M480 90V70M471 70H489"/>
+                <!-- Detector de fuga -->
+                <path d="M560 93V98"/>
+                <rect class="rell" x="549" y="98" width="22" height="14" rx="3"/>
+                <path d="M554 105h12" stroke-width="1.8"/>
+              </g>
+
+              <g class="rotulos">
+                <text x="25" y="58">Tolva</text>
+                <text x="176" y="286" text-anchor="middle">Bomba</text>
+                <text x="340" y="278" text-anchor="middle">Biodigestor</text>
+                <text x="606" y="80" text-anchor="end">Salida de biogás</text>
+              </g>
+
+              <g id="lideres" class="lideres"></g>
+            </svg>
+            <div id="tags"></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="t-lecturas">
+        <h2 id="t-lecturas">Lecturas</h2>
+        <div id="filas" class="filas"></div>
+      </section>
+    </div>
+
+    <section class="seccion" aria-labelledby="t-tend">
+      <div class="seccion-cab">
+        <h2 id="t-tend">Tendencia</h2>
+        <div class="controles">
+          <div id="sel-param" class="segmento" role="group" aria-label="Parámetro de la gráfica"></div>
+          <div id="sel-ventana" class="segmento" role="group" aria-label="Ventana de tiempo"></div>
+        </div>
+      </div>
+      <div id="grafica" class="grafica"></div>
+      <p id="leyenda" class="leyenda"></p>
+    </section>
+
+    <div class="seccion pie">
+      <section class="bitacora" aria-labelledby="t-bit">
+        <h2 id="t-bit">Bitácora de eventos</h2>
+        <ul id="bitacora"></ul>
+      </section>
+
+      <section aria-labelledby="t-seg">
+        <h2 id="t-seg">Seguridad: revisión en sitio</h2>
+        <ul id="checklist" class="lista-check"></ul>
+        <div class="check-pie">
+          <button id="btn-visita" class="boton" type="button">Registrar visita</button>
+          <span id="resumen-check"></span>
+          <span id="ultima-visita"></span>
+        </div>
+      </section>
+    </div>
+
+    <section id="demo" class="seccion demo" hidden aria-labelledby="t-demo">
+      <h2 id="t-demo">Prueba de alarmas</h2>
+      <p class="nota">Solo aparece con datos simulados. Sirve para mostrar cómo reacciona la página.</p>
+      <div class="demo-botones">
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="fuga">Simular fuga de gas</button>
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="tempAlta">Temperatura alta</button>
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="phBajo">pH bajo</button>
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="sinPh">Cortar señal de pH</button>
+        <button class="boton-sec" type="button" data-demo="valvula">Abrir o cerrar válvula</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ==================================================================
+   1. CONFIGURACIÓN  (lo primero que vas a tocar)
+   ==================================================================
+   modo:
+     'simulado'   -> datos inventados, para desarrollar la interfaz.
+     'http'       -> la página consulta una URL cada `intervaloMs`.
+     'websocket'  -> un servidor/ESP32 empuja datos por WebSocket.
+     'mqtt'       -> se suscribe a un broker MQTT (por WebSockets).
+
+   Formato de datos que la página entiende (JSON). Puedes mandar solo
+   algunas claves en cada mensaje; las que falten conservan su valor:
+     {
+       "temperatura": 36.4,        // °C
+       "ph": 7.1,
+       "presion": 1.8,             // kPa
+       "valvula_gas": "abierta",   // "abierta" | "cerrada" (o true/false)
+       "fuga_gas": false           // true = fuga detectada
+     }
+   ================================================================== */
+const CONFIG = {
+  modo: 'mqtt',            // 'mqtt' (actual), 'blynk' (anterior), 'simulado', 'http', 'websocket'
+
+  intervaloMs: 2000,       // frecuencia de consulta (simulado y http)
+  ventanaMaxMin: 30,       // minutos de historial que se guardan en memoria
+  sinDatoMs: 15000,        // sin lecturas por este tiempo -> "Sin dato".
+                           // Súbelo si tus sensores reportan cada minuto.
+
+  // Si el sensor de gas entrega un número (ppm o lectura analógica) en vez de
+  // true/false, pon aquí el umbral: a partir de ese valor se considera fuga.
+  fugaUmbral: null,
+
+  http:      { url: 'http://192.168.1.50/datos' },
+  websocket: { url: 'ws://192.168.1.50:81' },
+  // Blynk: cada sensor conectado a Blynk tiene su propio token de dispositivo
+  // (lo ves en Blynk.Console, columna "Token de autenticación"). Un mismo
+  // dispositivo puede tener varios pines virtuales (V0, V1...), uno por dato.
+  // Ejemplo con el sensor de gas: token "4CBdkg9I...", pin del valor "V0".
+  blynk: {
+    servidor: 'https://blynk.cloud',   // no cambiar salvo que usen su propio servidor
+    dispositivos: [
+      // Un objeto por cada dispositivo/placa de Blynk que tengan.
+      // 'pines' mapea cada parámetro de tu página al pin virtual de ESE dispositivo.
+      // Sensor de gas: V0 es la lectura cruda (ppm), V1 es el estado de alarma
+      // (0/1) que ya calcula el propio código del ESP32 — es lo que usamos aquí.
+      // Temperatura comparte el mismo ESP32 y token; su valor sale en V2.
+      { token: '4CBdkg9IQDW1BsqFaqNrJr_0i2LTCPZz', pines: { fuga_gas: 'V1' } },      // ESP32 de gas
+      { token: '-rcS8PSz0XmhZqXkZeD-It5ZAspqOjKQ', pines: { temperatura: 'V2' } }    // ESP32 de temperatura
+      // Cuando se sumen más sensores en Blynk con OTRO dispositivo/token, agrega
+      // otro objeto aquí, por ejemplo:
+      // { token: 'TOKEN_DEL_SENSOR_DE_PRESION', pines: { presion: 'V0' } },
+    ]
+  },
+  // MQTT: cada ESP32 publica en  <prefijo>/<id>/datos   (JSON, ej. {"fuga":0,"lectura":1234})
+  //                      y en   <prefijo>/<id>/estado  ("online" / "offline")
+  // El prefijo y los id deben ser IGUALES a PREFIJO y DISPOSITIVO en el código de cada ESP32.
+  mqtt: {
+    // EMQX Serverless del proyecto (WebSocket seguro, puerto 8084).
+    url: 'wss://yed42b16.ala.us-east-1.emqxsl.com:8084/mqtt',
+    // Usuario de SOLO LECTURA (en EMQX tiene prohibido publicar).
+    // Esta contraseña la puede ver cualquiera que abra el código de la página;
+    // por eso este usuario no puede mandar datos, solo escucharlos.
+    usuario: 'Pagina',
+    contrasena: 'U&7uqJE*',
+    // Para volver a pruebas con el broker público: url 'wss://broker.emqx.io:8084/mqtt'
+    // y usuario/contrasena vacíos (y en los ESP32: broker.emqx.io, 1883, sin TLS).
+    prefijo: 'uttn-biodigestor-r7k2qx',
+    dispositivos: [
+      // 'campos' traduce cada dato del JSON del ESP32 a un parámetro de esta página.
+      { id: 'gas', nombre: 'ESP32 de gas', campos: { fuga: 'fuga_gas' },
+        // Nombre de cada sensor de gas, en el MISMO orden que PINES_SENSOR en Gas_MQTT.ino.
+        // Sirve para decir en la página cuál detectó la fuga.
+        nombresSensores: ['MQ-2 (pin 34)', 'MQ-4 (pin 35)', 'MQ-4 (pin 32)'] },
+      { id: 'temperatura', nombre: 'ESP32 de temperatura', campos: { temp: 'temperatura' } },
+      { id: 'presion',     nombre: 'Placa de presión (UNO R4 WiFi)', campos: { psi: 'presion' } }
+    ]
+  }
+};
+
+/* ==================================================================
+   2. PARÁMETROS Y UMBRALES
+   ==================================================================
+   OJO: los rangos son valores de ejemplo para arrancar. Hay que
+   confirmarlos con el profesor y con los sensores que se elijan.
+     escala : rango que dibuja el medidor y la gráfica
+     normal : zona verde
+     alerta : zona ámbar (fuera de "normal" pero todavía tolerable)
+     fuera de "alerta" = crítico
+   ================================================================== */
+const PARAMETROS = [
+  { id: 'valvula_gas', nombre: 'Válvula de gas',          corto: 'Válvula de gas', tipo: 'estado' },
+  { id: 'ph',          nombre: 'pH',                      corto: 'pH',             tipo: 'numero', unidad: '',    dec: 2,
+    escala: [5, 9],    normal: [6.8, 7.6], alerta: [6.5, 8.0] },
+  { id: 'temperatura', nombre: 'Temperatura',             corto: 'Temperatura',    tipo: 'numero', unidad: '°C',  dec: 1,
+    // Rangos tomados de Temperatura.ino: óptimo entre 20 y 30 °C; alerta a ≥30 o ≤20.
+    // El código del ESP32 no define un nivel crítico; por ahora solo se marca crítico
+    // fuera de 10–45 °C. Confirmar con el equipo de temperatura.
+    escala: [10, 45],  normal: [20, 30],   alerta: [10, 45] },
+  { id: 'presion',     nombre: 'Presión del gas',         corto: 'Presión',        tipo: 'numero', unidad: 'PSI', dec: 2,
+    // El sensor mide de 0 a 10 PSI. Los rangos normal/alerta son PROVISIONALES:
+    // confirmarlos con el profesor y el equipo de presión.
+    escala: [0, 10],   normal: [0.1, 2],   alerta: [0, 4] },
+  { id: 'fuga_gas',    nombre: 'Detector de fuga de gas', corto: 'Fuga de gas',    tipo: 'alarma' }
+];
+
+/* Posición de cada sensor en el esquema (coordenadas del dibujo, 640 x 420).
+   tag = donde se pinta la etiqueta, punto = donde apunta la línea guía. */
+const POSICION = {
+  presion:     { tag: [262, 52],  punto: [352, 116] },
+  valvula_gas: { tag: [530, 42],  punto: [484, 72]  },
+  fuga_gas:    { tag: [560, 160], punto: [560, 114] },
+  temperatura: { tag: [545, 232], punto: [392, 236] },
+  ph:          { tag: [545, 296], punto: [424, 282] }
+};
+
+/* Lista de seguridad (pizarrón: guarda en la tolva, visitas continuas, lugar).
+   Los dos últimos puntos son propuesta mía: ajústalos con tu equipo. */
+const CHECKLIST = [
+  'Guarda de seguridad colocada en la tolva',
+  'Visita de inspección al biodigestor realizada',
+  'Uniones y tuberías revisadas, sin olor a gas',
+  'Lugar despejado, ventilado y sin fuentes de ignición'
+];
+
+const NOMBRE_MODO = { simulado: 'datos simulados', http: 'consulta HTTP', websocket: 'WebSocket', mqtt: 'MQTT', blynk: 'Blynk' };
+
+/* ==================================================================
+   3. ESTADO EN MEMORIA
+   ================================================================== */
+const $ = (sel, raiz = document) => raiz.querySelector(sel);
+const lecturas = {};      // id -> { valor, ts }
+const historial = {};     // id -> [{ t, v }]  (solo parámetros numéricos)
+PARAMETROS.forEach(p => { if (p.tipo === 'numero') historial[p.id] = []; });
+let ultimaLectura = null;
+let detalleFuga = '';     // nombres de los sensores de gas que detectan fuga (ej. "Sensor 2, Sensor 3")
+let seleccion = 'temperatura';
+let ventanaMin = 15;
+
+/* Convierte lo que llegue del sensor a un valor limpio (o null si no sirve) */
+function normalizar(p, crudo) {
+  // Vacío, null u objetos raros nunca cuentan como lectura (evita falsas alarmas y 0 °C falsos)
+  if (crudo === null || crudo === undefined || crudo === '' || typeof crudo === 'object') return null;
+  if (p.tipo === 'numero') {
+    const n = Number(crudo);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (p.tipo === 'estado') {
+    if (typeof crudo === 'string') {
+      const s = crudo.trim().toLowerCase();
+      if (['abierta', 'abierto', 'open', 'on', '1', 'true'].includes(s)) return 'abierta';
+      if (['cerrada', 'cerrado', 'closed', 'close', 'off', '0', 'false'].includes(s)) return 'cerrada';
+      return null;
+    }
+    if (typeof crudo === 'number' || typeof crudo === 'boolean') return crudo ? 'abierta' : 'cerrada';
+    return null;
+  }
+  // alarma
+  if (typeof crudo === 'number' && CONFIG.fugaUmbral != null) return crudo >= CONFIG.fugaUmbral;
+  if (typeof crudo === 'string') return ['1', 'true', 'on', 'fuga', 'si', 'sí'].includes(crudo.trim().toLowerCase());
+  if (typeof crudo === 'number' || typeof crudo === 'boolean') return Boolean(crudo);
+  return null;
+}
+
+/* Guarda datos sin redibujar (se usa también para el historial inicial) */
+function guardar(datos, ts) {
+  if (!datos || typeof datos !== 'object') return;
+  for (const p of PARAMETROS) {
+    if (!(p.id in datos)) continue;
+    const v = normalizar(p, datos[p.id]);
+    if (v === null) continue;
+    lecturas[p.id] = { valor: v, ts };
+    if (p.tipo === 'numero') historial[p.id].push({ t: ts, v });
+  }
+  if (ultimaLectura === null || ts > ultimaLectura) ultimaLectura = ts;
+}
+
+/* Punto de entrada único: todos los adaptadores llaman a esta función */
+function recibir(datos) {
+  guardar(datos, Date.now());
+  const limite = Date.now() - CONFIG.ventanaMaxMin * 60000;
+  for (const id in historial) {
+    const h = historial[id];
+    while (h.length && h[0].t < limite) h.shift();
+  }
+  actualizar();
+}
+
+/* ==================================================================
+   4. EVALUACIÓN DE ESTADO
+   ================================================================== */
+function evaluar(p, ahora) {
+  const l = lecturas[p.id];
+  if (!l || ahora - l.ts > CONFIG.sinDatoMs) {
+    return { nivel: 'sindato', etiqueta: 'Sin dato', valor: '—', unidad: '', pct: null, ts: l ? l.ts : null, clave: 'sindato' };
+  }
+  const v = l.valor;
+  if (p.tipo === 'numero') {
+    const [nmin, nmax] = p.normal, [amin, amax] = p.alerta, [e0, e1] = p.escala;
+    const base = { valor: v.toFixed(p.dec), unidad: p.unidad, pct: Math.min(1, Math.max(0, (v - e0) / (e1 - e0))), ts: l.ts };
+    if (v >= nmin && v <= nmax) return { ...base, nivel: 'ok', etiqueta: 'Normal', clave: 'ok' };
+    const detalle = v > nmax ? 'alto' : 'bajo';
+    const nivel = (v >= amin && v <= amax) ? 'alerta' : 'critico';
+    return { ...base, nivel, detalle, etiqueta: `${nivel === 'alerta' ? 'Alerta' : 'Crítico'}: valor ${detalle}`, clave: `${nivel}|${detalle}` };
+  }
+  if (p.tipo === 'estado') {
+    return { nivel: 'info', etiqueta: '', valor: v === 'abierta' ? 'Abierta' : 'Cerrada', unidad: '', pct: null, ts: l.ts, clave: 'info|' + v };
+  }
+  return v
+    ? { nivel: 'critico', etiqueta: detalleFuga, valor: 'Fuga detectada', unidad: '', pct: null, ts: l.ts, clave: 'critico|' + detalleFuga }
+    : { nivel: 'ok', etiqueta: '', valor: 'Sin fuga', unidad: '', pct: null, ts: l.ts, clave: 'ok' };
+}
+
+/* ==================================================================
+   5. INTERFAZ
+   ================================================================== */
+const filas = {}, tags = {};
+
+function hora(t) {
+  return new Date(t).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+function edad(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `hace ${s} s`;
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  return 'hace más de 1 h';
+}
+
+function construirTags() {
+  const cont = $('#tags'), lideres = $('#lideres');
+  let svg = '';
+  for (const p of PARAMETROS) {
+    const pos = POSICION[p.id];
+    svg += `<line x1="${pos.tag[0]}" y1="${pos.tag[1]}" x2="${pos.punto[0]}" y2="${pos.punto[1]}"/>` +
+           `<circle cx="${pos.punto[0]}" cy="${pos.punto[1]}" r="3.5"/>`;
+    const el = document.createElement('div');
+    el.className = 'tag';
+    el.dataset.nivel = 'sindato';
+    el.setAttribute('aria-hidden', 'true');   // la información accesible está en las filas
+    el.style.left = (pos.tag[0] / 640 * 100) + '%';
+    el.style.top = (pos.tag[1] / 420 * 100) + '%';
+    el.innerHTML = `<span class="tag-texto"><span class="tag-etq">${p.corto}</span><span class="tag-val">—</span></span>`;
+    if (p.tipo === 'numero') {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => seleccionar(p.id));
+    }
+    cont.appendChild(el);
+    tags[p.id] = { el, val: $('.tag-val', el) };
+  }
+  lideres.innerHTML = svg;
+}
+
+function construirFilas() {
+  const cont = $('#filas');
+  for (const p of PARAMETROS) {
+    const esNum = p.tipo === 'numero';
+    const el = document.createElement(esNum ? 'button' : 'div');
+    el.className = 'fila';
+    el.dataset.id = p.id;
+    el.dataset.tipo = p.tipo;
+    el.dataset.nivel = 'sindato';
+    if (esNum) {
+      el.type = 'button';
+      el.setAttribute('aria-pressed', 'false');
+      el.addEventListener('click', () => seleccionar(p.id));
+    }
+    let medidor = '';
+    if (esNum) {
+      const [e0, e1] = p.escala, pct = v => ((v - e0) / (e1 - e0) * 100);
+      medidor =
+        `<span class="medidor" aria-hidden="true">` +
+          `<span class="z-alerta" style="left:${pct(p.alerta[0])}%;width:${pct(p.alerta[1]) - pct(p.alerta[0])}%"></span>` +
+          `<span class="z-ok" style="left:${pct(p.normal[0])}%;width:${pct(p.normal[1]) - pct(p.normal[0])}%"></span>` +
+          `<span class="aguja" hidden></span>` +
+        `</span>` +
+        `<span class="extremos" aria-hidden="true"><span>${e0}</span><span>${e1}</span></span>`;
+    }
+    el.innerHTML =
+      `<span class="barra"></span>` +
+      `<span class="nombre">${p.nombre}<span class="linea-estado"><span class="estado"></span><span class="edad"></span></span></span>` +
+      `<span class="valor"><b>—</b><i></i></span>` + medidor;
+    cont.appendChild(el);
+    filas[p.id] = {
+      el, estado: $('.estado', el), edad: $('.edad', el),
+      val: $('.valor b', el), uni: $('.valor i', el), aguja: $('.aguja', el)
+    };
+  }
+}
+
+function construirControlesGrafica() {
+  const sp = $('#sel-param');
+  PARAMETROS.filter(p => p.tipo === 'numero').forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = p.corto; b.dataset.id = p.id;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => seleccionar(p.id));
+    sp.appendChild(b);
+  });
+  const sv = $('#sel-ventana');
+  [5, 15, 30].forEach(m => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = `${m} min`; b.dataset.min = m;
+    b.setAttribute('aria-pressed', String(m === ventanaMin));
+    b.addEventListener('click', () => {
+      ventanaMin = m;
+      sv.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(Number(x.dataset.min) === m)));
+      dibujarGrafica();
+    });
+    sv.appendChild(b);
+  });
+}
+
+function seleccionar(id) {
+  seleccion = id;
+  for (const p of PARAMETROS) {
+    if (p.tipo !== 'numero') continue;
+    filas[p.id].el.setAttribute('aria-pressed', String(p.id === id));
+    tags[p.id].el.classList.toggle('sel', p.id === id);
+  }
+  $('#sel-param').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+  const p = PARAMETROS.find(x => x.id === id);
+  const u = p.unidad ? ' ' + p.unidad : '';
+  $('#leyenda').textContent =
+    `Zona verde: normal (${p.normal[0]} a ${p.normal[1]}${u}). Zona ámbar: alerta (${p.alerta[0]} a ${p.alerta[1]}${u}). Fuera de eso, el estado es crítico.`;
+  dibujarGrafica();
+}
+
+/* ---------- Gráfica de tendencia (SVG dibujado a mano, sin librerías) ---------- */
+function dibujarGrafica() {
+  const p = PARAMETROS.find(x => x.id === seleccion);
+  const cont = $('#grafica');
+  const W = cont.clientWidth ? cont.clientWidth - 16 : 600, H = 280;
+  const m = { i: 50, d: 22, s: 14, b: 32 };
+  const pw = W - m.i - m.d, ph = H - m.s - m.b;
+  const [ymin, ymax] = p.escala;
+  const ahora = Date.now(), t0 = ahora - ventanaMin * 60000;
+  const X = t => m.i + (t - t0) / (ahora - t0) * pw;
+  const Y = v => m.s + (1 - (Math.min(Math.max(v, ymin), ymax) - ymin) / (ymax - ymin)) * ph;
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Gráfica de tendencia: ${p.nombre}">`;
+  s += `<rect class="gz-crit" x="${m.i}" y="${m.s}" width="${pw}" height="${ph}"/>`;
+  s += `<rect class="gz-alerta" x="${m.i}" y="${Y(p.alerta[1])}" width="${pw}" height="${Y(p.alerta[0]) - Y(p.alerta[1])}"/>`;
+  s += `<rect class="gz-ok" x="${m.i}" y="${Y(p.normal[1])}" width="${pw}" height="${Y(p.normal[0]) - Y(p.normal[1])}"/>`;
+
+  for (let i = 0; i <= 4; i++) {
+    const v = ymin + i * (ymax - ymin) / 4, y = Y(v);
+    s += `<line class="g-rejilla" x1="${m.i}" y1="${y}" x2="${W - m.d}" y2="${y}"/>`;
+    s += `<text x="${m.i - 8}" y="${y + 4}" text-anchor="end">${Number(v.toFixed(p.dec))}</text>`;
+  }
+  const divisiones = W < 480 ? 2 : 5;
+  for (let i = 0; i <= divisiones; i++) {
+    const f = i / divisiones, x = m.i + f * pw;
+    const min = Number((ventanaMin * (1 - f)).toFixed(1));
+    const ancla = i === 0 ? 'start' : (i === divisiones ? 'end' : 'middle');
+    s += `<text x="${x}" y="${H - 8}" text-anchor="${ancla}">${min === 0 ? 'ahora' : `hace ${min} min`}</text>`;
+  }
+
+  const puntos = historial[p.id].filter(q => q.t >= t0);
+  if (!puntos.length) {
+    s += `<text x="${m.i + pw / 2}" y="${m.s + ph / 2}" text-anchor="middle">Sin datos en esta ventana</text>`;
+  } else {
+    let d = '', previo = null;
+    for (const q of puntos) {
+      const corte = previo === null || q.t - previo > CONFIG.sinDatoMs;   // hueco = línea cortada
+      d += `${corte ? 'M' : 'L'}${X(q.t).toFixed(1)} ${Y(q.v).toFixed(1)} `;
+      previo = q.t;
+    }
+    s += `<path class="g-linea" d="${d}"/>`;
+    const u = puntos[puntos.length - 1];
+    s += `<circle class="g-punto" cx="${X(u.t)}" cy="${Y(u.v)}" r="5"/>`;
+    const izq = X(u.t) > W - 80;
+    s += `<text class="g-valor" x="${X(u.t) + (izq ? -10 : 10)}" y="${Y(u.v) - 10}" text-anchor="${izq ? 'end' : 'start'}">${u.v.toFixed(p.dec)}${p.unidad ? ' ' + p.unidad : ''}</text>`;
+  }
+  cont.innerHTML = s + '</svg>';
+}
+
+/* ---------- Bitácora ---------- */
+const bitacora = [];
+function registrar(texto, nivel = 'info') {
+  bitacora.unshift({ t: Date.now(), texto, nivel });
+  if (bitacora.length > 60) bitacora.pop();
+  $('#bitacora').innerHTML = bitacora
+    .map(e => `<li data-nivel="${e.nivel}"><time>${hora(e.t)}</time><i></i><span>${e.texto}</span></li>`)
+    .join('');
+}
+
+const previo = {};
+function mensajeLog(p, ev) {
+  const val = ev.valor + (ev.unidad ? ' ' + ev.unidad : '');
+  if (ev.nivel === 'sindato') return `${p.nombre}: sin dato`;
+  if (p.tipo === 'numero') {
+    if (ev.nivel === 'ok') return `${p.nombre}: normal (${val})`;
+    return `${p.nombre}: ${ev.nivel === 'alerta' ? 'alerta' : 'crítico'}, valor ${ev.detalle} (${val})`;
+  }
+  if (p.tipo === 'estado') return `${p.nombre}: ${ev.valor.toLowerCase()}`;
+  if (ev.nivel === 'critico') return 'Fuga de gas detectada' + (detalleFuga ? ` (${detalleFuga})` : '');
+  return `${p.nombre}: sin fuga`;
+}
+
+/* ---------- Aviso superior ---------- */
+let avisoClave = '';
+function actualizarAviso(criticos, alertas) {
+  const clave = criticos.map(c => c.id).join(',') + '#' + alertas.map(a => a.id).join(',');
+  if (clave === avisoClave) return;
+  avisoClave = clave;
+  const aviso = $('#aviso');
+  if (!criticos.length && !alertas.length) { aviso.hidden = true; return; }
+  aviso.dataset.nivel = criticos.length ? 'critico' : 'alerta';
+  let html = '';
+  if (criticos.length) {
+    html += `<strong>Atención inmediata.</strong> ${criticos.map(c => c.msg).join('. ')}.`;
+    if (criticos.some(c => c.id.startsWith('fuga_gas'))) html += ' Evita flamas y chispas y ventila la zona.';
+  }
+  if (alertas.length) {
+    html += `${html ? ' ' : '<strong>Revisar.</strong> '}${criticos.length ? 'También: ' : ''}${alertas.map(a => a.msg).join('. ')}.`;
+  }
+  aviso.innerHTML = html;
+  aviso.hidden = false;
+}
+
+/* ---------- Ciclo de actualización (1 vez por segundo y en cada lectura) ---------- */
+function actualizar() {
+  const ahora = Date.now();
+  const criticos = [], alertas = [];
+
+  for (const p of PARAMETROS) {
+    const ev = evaluar(p, ahora);
+    const f = filas[p.id], t = tags[p.id];
+
+    f.el.dataset.nivel = ev.nivel;
+    f.estado.textContent = ev.etiqueta;
+    f.edad.textContent = ev.ts ? edad(ahora - ev.ts) : 'sin lecturas';
+    f.val.textContent = ev.valor;
+    f.uni.textContent = ev.unidad;
+    if (f.aguja) {
+      f.aguja.hidden = ev.pct === null;
+      if (ev.pct !== null) f.aguja.style.left = (ev.pct * 100) + '%';
+    }
+
+    t.el.dataset.nivel = ev.nivel;
+    t.val.textContent = ev.valor + (ev.unidad ? ' ' + ev.unidad : '');
+    t.el.setAttribute('aria-label', `${p.nombre}: ${t.val.textContent}`);
+
+    if (previo[p.id] !== undefined && previo[p.id] !== ev.clave) registrar(mensajeLog(p, ev), ev.nivel);
+    previo[p.id] = ev.clave;
+
+    if (ev.nivel === 'critico') {
+      criticos.push({ id: p.id + '|' + ev.clave, msg: p.id === 'fuga_gas'
+        ? 'Fuga de gas detectada' + (detalleFuga ? ` en ${detalleFuga}` : '')
+        : `${p.nombre} en estado crítico` });
+    } else if (ev.nivel === 'alerta') {
+      alertas.push({ id: p.id, msg: `${p.nombre} en alerta` });
+    } else if (ev.nivel === 'sindato' && p.id === 'fuga_gas') {
+      alertas.push({ id: p.id, msg: 'Sin señal del detector de fuga de gas' });
+    }
+  }
+
+  actualizarAviso(criticos, alertas);
+  document.title = (criticos.length ? '(!) ' : '') + 'Biodigestor: monitoreo en tiempo real';
+  $('#ultima').textContent = ultimaLectura ? `Última lectura: ${hora(ultimaLectura)}` : 'Sin lecturas todavía';
+  dibujarGrafica();
+}
+
+/* ---------- Estado de la conexión ---------- */
+const CONEXION = {
+  simulado:     ['info',    'Datos simulados'],
+  conectando:   ['sindato', 'Conectando'],
+  conectado:    ['ok',      'Conectado'],
+  desconectado: ['critico', 'Sin conexión']
+};
+function setConexion(clave) {
+  const [nivel, texto] = CONEXION[clave];
+  $('#conexion').dataset.nivel = nivel;
+  $('#conexion-texto').textContent = texto;
+}
+
+/* ---------- Lista de seguridad ---------- */
+const CLAVE_CHECK = 'biodigestor.checklist';
+const hoy = () => new Date().toLocaleDateString('sv-SE');
+let check = { fecha: hoy(), marcados: [], ultimaVisita: null };
+
+function cargarChecklist() {
+  try {
+    const g = JSON.parse(localStorage.getItem(CLAVE_CHECK) || 'null');
+    if (g) check = { fecha: hoy(), marcados: g.fecha === hoy() ? (g.marcados || []) : [], ultimaVisita: g.ultimaVisita || null };
+  } catch (e) { /* sin almacenamiento disponible: se trabaja solo en memoria */ }
+}
+function guardarChecklist() {
+  try { localStorage.setItem(CLAVE_CHECK, JSON.stringify(check)); } catch (e) { /* ignorar */ }
+}
+function pintarChecklist() {
+  $('#resumen-check').textContent = `${check.marcados.length} de ${CHECKLIST.length} puntos revisados hoy`;
+  $('#ultima-visita').textContent = check.ultimaVisita
+    ? 'Última visita: ' + new Date(check.ultimaVisita).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
+    : 'Sin visitas registradas';
+}
+function construirChecklist() {
+  cargarChecklist();
+  const ul = $('#checklist');
+  CHECKLIST.forEach((texto, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<label><input type="checkbox"><span>${texto}</span></label>`;
+    const cb = $('input', li);
+    cb.checked = check.marcados.includes(i);
+    cb.addEventListener('change', () => {
+      check.marcados = cb.checked ? [...new Set([...check.marcados, i])] : check.marcados.filter(x => x !== i);
+      guardarChecklist(); pintarChecklist();
+    });
+    ul.appendChild(li);
+  });
+  $('#btn-visita').addEventListener('click', () => {
+    check.ultimaVisita = Date.now();
+    guardarChecklist(); pintarChecklist();
+    registrar(`Visita registrada: ${check.marcados.length} de ${CHECKLIST.length} puntos revisados`, 'info');
+  });
+  pintarChecklist();
+}
+
+/* ==================================================================
+   6. ADAPTADORES DE DATOS
+   Cada uno solo tiene que llamar a recibir({...}) y a setConexion().
+   ================================================================== */
+
+/* --- Simulado --- */
+function crearSimulador() {
+  const s = { temperatura: 36, ph: 7.2, presion: 2.4 };
+  const demo = { fuga: false, tempAlta: false, phBajo: false, sinPh: false };
+  let valvula = 'cerrada';
+  const ruido = a => (Math.random() - 0.5) * 2 * a;
+  return {
+    demo,
+    alternarValvula() { valvula = valvula === 'cerrada' ? 'abierta' : 'cerrada'; },
+    paso(t) {
+      const min = t / 60000;
+      const objT = demo.tempAlta ? 48 : 36 + 1.2 * Math.sin(min / 5);
+      s.temperatura += (objT - s.temperatura) * (demo.tempAlta ? 0.12 : 0.05) + ruido(0.06);
+      const objPh = demo.phBajo ? 6.1 : 7.2 + 0.12 * Math.sin(min / 8);
+      s.ph += (objPh - s.ph) * 0.1 + ruido(0.008);
+      const objP = valvula === 'abierta' ? 0.9 : 2.5;      // con la válvula abierta baja la presión
+      s.presion += (objP - s.presion) * 0.08 + ruido(0.03);
+      const d = { temperatura: s.temperatura, ph: s.ph, presion: s.presion, valvula_gas: valvula, fuga_gas: demo.fuga };
+      if (demo.sinPh) delete d.ph;                          // simula un sensor que dejó de responder
+      return d;
+    }
+  };
+}
+
+function adaptadorSimulado() {
+  const sim = crearSimulador();
+  const ahora = Date.now();
+  for (let t = ahora - CONFIG.ventanaMaxMin * 60000; t < ahora; t += 5000) guardar(sim.paso(t), t);  // historial inicial
+  setConexion('simulado');
+  $('#demo').hidden = false;
+  $('#demo').querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.demo;
+    if (k === 'valvula') { sim.alternarValvula(); return; }
+    sim.demo[k] = !sim.demo[k];
+    b.setAttribute('aria-pressed', String(sim.demo[k]));
+  }));
+  setInterval(() => recibir(sim.paso(Date.now())), CONFIG.intervaloMs);
+  recibir(sim.paso(Date.now()));
+}
+
+/* --- HTTP: consulta periódica a una URL que devuelve el JSON --- */
+function adaptadorHttp() {
+  setConexion('conectando');
+  const consultar = async () => {
+    try {
+      const r = await fetch(CONFIG.http.url, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      recibir(await r.json());
+      setConexion('conectado');
+    } catch (e) {
+      setConexion('desconectado');
+    }
+  };
+  consultar();
+  setInterval(consultar, CONFIG.intervaloMs);
+}
+
+/* --- WebSocket: el servidor envía el JSON cada vez que hay datos --- */
+function adaptadorWebSocket() {
+  let intentos = 0;
+  const conectar = () => {
+    setConexion('conectando');
+    const ws = new WebSocket(CONFIG.websocket.url);
+    ws.onopen = () => { intentos = 0; setConexion('conectado'); };
+    ws.onmessage = e => { try { recibir(JSON.parse(e.data)); } catch (err) { /* mensaje ilegible */ } };
+    ws.onerror = () => ws.close();
+    ws.onclose = () => {
+      setConexion('desconectado');
+      setTimeout(conectar, Math.min(10000, 1000 * 2 ** intentos++));   // reintenta con espera creciente
+    };
+  };
+  conectar();
+}
+
+/* --- MQTT: cada ESP32 publica sus datos en JSON y su estado (online/offline).
+       La página se suscribe y los recibe al instante, sin consultar. --- */
+function adaptadorMqtt() {
+  const c = CONFIG.mqtt;
+  const estadoPlaca = {};   // id -> 'online' | 'offline'
+  setConexion('conectando');
+
+  const manejarEstado = (disp, estado) => {
+    if (estado !== 'online' && estado !== 'offline') return;
+    if (estadoPlaca[disp.id] === estado) return;
+    estadoPlaca[disp.id] = estado;
+    if (estado === 'offline') {
+      registrar(`${disp.nombre}: desconectado`, 'alerta');
+      Object.values(disp.campos).forEach(id => { delete lecturas[id]; });   // sus datos pasan a "Sin dato"
+      if (disp.nombresSensores) detalleFuga = '';
+      actualizar();
+    } else {
+      registrar(`${disp.nombre}: en línea`, 'ok');
+    }
+  };
+
+  const conectar = () => {
+    const opciones = {
+      clientId: 'pagina-' + Math.random().toString(16).slice(2, 10),
+      reconnectPeriod: 3000,
+      connectTimeout: 10000,
+      clean: true
+    };
+    if (c.usuario) { opciones.username = c.usuario; opciones.password = c.contrasena; }
+
+    const rutas = {};   // tópico -> { disp, tipo }
+    c.dispositivos.forEach(disp => {
+      rutas[`${c.prefijo}/${disp.id}/datos`]  = { disp, tipo: 'datos' };
+      rutas[`${c.prefijo}/${disp.id}/estado`] = { disp, tipo: 'estado' };
+    });
+
+    const cliente = window.mqtt.connect(c.url, opciones);
+    cliente.on('connect', () => { setConexion('conectado'); cliente.subscribe(Object.keys(rutas), { qos: 1 }); });
+    cliente.on('reconnect', () => setConexion('conectando'));
+    cliente.on('close', () => setConexion('desconectado'));
+    cliente.on('error', e => console.warn('MQTT:', e && e.message));
+    cliente.on('message', (tema, payload) => {
+      const ruta = rutas[tema];
+      if (!ruta) return;
+      const texto = payload.toString();
+      if (ruta.tipo === 'estado') { manejarEstado(ruta.disp, texto.trim().toLowerCase()); return; }
+
+      let datos;
+      try { datos = JSON.parse(texto); } catch (e) { return; }   // mensaje ilegible: se ignora
+      if (!datos || typeof datos !== 'object') return;
+      const paquete = {};
+      for (const campo in ruta.disp.campos) {
+        if (campo in datos) paquete[ruta.disp.campos[campo]] = datos[campo];
+      }
+      // Sensores de gas: "sensores":[0,1,0,0] dice cuál detecta fuga
+      if (ruta.disp.nombresSensores && Array.isArray(datos.sensores)) {
+        detalleFuga = datos.sensores
+          .map((s, i) => (Number(s) ? (ruta.disp.nombresSensores[i] || `Sensor ${i + 1}`) : null))
+          .filter(Boolean).join(', ');
+      }
+      if (estadoPlaca[ruta.disp.id] !== 'online') manejarEstado(ruta.disp, 'online');
+      if (Object.keys(paquete).length) recibir(paquete);
+    });
+  };
+
+  if (window.mqtt) { conectar(); return; }
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';
+  script.onerror = () => setConexion('desconectado');
+  script.onload = conectar;
+  document.head.appendChild(script);
+}
+
+/* --- Blynk: consulta periódica a la API HTTP de Blynk.Cloud.
+       Puede leer varios dispositivos (cada uno con su propio token) y
+       combinar sus pines en una sola lectura del biodigestor. --- */
+function adaptadorBlynk() {
+  const dispositivos = CONFIG.blynk.dispositivos.filter(d => d.token && !d.token.startsWith('PEGA_AQUI'));
+  if (!dispositivos.length) {
+    console.warn('Modo "blynk": agrega al menos un token real en CONFIG.blynk.dispositivos.');
+    setConexion('desconectado');
+    return;
+  }
+  setConexion('conectando');
+
+  const consultarDispositivo = async (dispositivo) => {
+    const idsParametro = Object.keys(dispositivo.pines);           // ej. ['fuga_gas']
+    const pinesUrl = idsParametro.map(id => dispositivo.pines[id]).join('&'); // ej. 'V0&V1'
+    const url = `${CONFIG.blynk.servidor}/external/api/get?token=${dispositivo.token}&${pinesUrl}`;
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('Blynk HTTP ' + r.status);
+    const datos = await r.json();
+    // Formato de Blynk:
+    //   un solo pin   -> valor suelto, ej. 1  o  "25.3"
+    //   varios pines  -> objeto con el nombre del pin en minúsculas, ej. {"v1": 0, "v2": 25.3}
+    const paquete = {};
+    if (idsParametro.length === 1 && (datos === null || typeof datos !== 'object')) {
+      paquete[idsParametro[0]] = datos;
+    } else if (datos && typeof datos === 'object' && !Array.isArray(datos)) {
+      const porPin = {};
+      for (const k in datos) porPin[k.toLowerCase()] = datos[k];
+      idsParametro.forEach(id => {
+        const clave = dispositivo.pines[id].toLowerCase();
+        if (clave in porPin) paquete[id] = porPin[clave];   // si falta el pin, ese dato queda "Sin dato"
+      });
+    } else if (Array.isArray(datos)) {
+      idsParametro.forEach((id, i) => { paquete[id] = datos[i]; });
+    }
+    return paquete;
+  };
+
+  const consultarTodos = async () => {
+    // Cada dispositivo se consulta por separado: si una placa falla, las demás siguen mostrando datos.
+    const resultados = await Promise.allSettled(dispositivos.map(consultarDispositivo));
+    const exitosos = resultados.filter(r => r.status === 'fulfilled').map(r => r.value);
+    resultados.forEach((r, i) => {
+      if (r.status === 'rejected') console.warn(`Blynk: falló el dispositivo ${i + 1} (${Object.keys(dispositivos[i].pines).join(', ')}):`, r.reason.message);
+    });
+    if (exitosos.length) {
+      recibir(Object.assign({}, ...exitosos));
+      setConexion('conectado');
+    } else {
+      setConexion('desconectado');
+    }
+  };
+  consultarTodos();
+  setInterval(consultarTodos, CONFIG.intervaloMs);
+}
+
+const ADAPTADORES = { simulado: adaptadorSimulado, http: adaptadorHttp, websocket: adaptadorWebSocket, mqtt: adaptadorMqtt, blynk: adaptadorBlynk };
+
+/* ==================================================================
+   7. ARRANQUE
+   ================================================================== */
+function iniciar() {
+  construirTags();
+  construirFilas();
+  construirControlesGrafica();
+  construirChecklist();
+  seleccionar(seleccion);
+
+  if (!ADAPTADORES[CONFIG.modo]) {
+    console.warn(`Modo "${CONFIG.modo}" no existe; se usa "simulado".`);
+    CONFIG.modo = 'simulado';
+  }
+  registrar(`Monitor iniciado (${NOMBRE_MODO[CONFIG.modo]})`, 'info');
+  ADAPTADORES[CONFIG.modo]();
+
+  actualizar();
+  setInterval(actualizar, 1000);
+  if ('ResizeObserver' in window) new ResizeObserver(dibujarGrafica).observe($('#grafica'));
+}
+
+iniciar();
+})();
+</script>
+</body>
+</html>
