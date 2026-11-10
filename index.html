@@ -17,15 +17,16 @@
     --tablero: #F7F9FA;
     --marco: #C7D0D6;
     --linea: #C5CED4;
+    --rejilla: #D6DDE2;
     --tinta: #14213F;
     --tinta-suave: #4A5673;
     --marcador: #2447C4;
     --gas: #0E8A6E;
 
-    --ok: #1F8A5B;        --ok-tx: #17643F;        --ok-bg: #9FD4B8;
-    --alerta: #E0A100;    --alerta-tx: #7A5200;    --alerta-bg: #F2D48A;
-    --critico: #D0382A;   --critico-tx: #A82016;   --critico-bg: #F0B4AD;
-    --sindato: #7C8790;   --sindato-tx: #55606A;
+    --ok: #1F8A5B;        --ok-tx: #17643F;        --ok-bg: #9FD4B8;       --ok-suave: #E2F2E9;
+    --alerta: #E0A100;    --alerta-tx: #7A5200;    --alerta-bg: #F2D48A;   --alerta-suave: #FBF0D2;
+    --critico: #D0382A;   --critico-tx: #A82016;   --critico-bg: #F0B4AD;  --critico-suave: #FBE1DD;
+    --sindato: #7C8790;   --sindato-tx: #55606A;                           --sindato-suave: #EDF0F2;
     --info: #2447C4;      --info-tx: #1B379A;
 
     --fuente: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
@@ -33,17 +34,17 @@
   }
 
   /* Cada elemento con data-nivel toma su color de estado */
-  [data-nivel="ok"]      { --c: var(--ok);      --ctx: var(--ok-tx); }
-  [data-nivel="alerta"]  { --c: var(--alerta);  --ctx: var(--alerta-tx); }
-  [data-nivel="critico"] { --c: var(--critico); --ctx: var(--critico-tx); }
-  [data-nivel="sindato"] { --c: var(--sindato); --ctx: var(--sindato-tx); }
-  [data-nivel="info"]    { --c: var(--info);    --ctx: var(--info-tx); }
+  [data-nivel="ok"]      { --c: var(--ok);      --ctx: var(--ok-tx);      --cs: var(--ok-suave); }
+  [data-nivel="alerta"]  { --c: var(--alerta);  --ctx: var(--alerta-tx);  --cs: var(--alerta-suave); }
+  [data-nivel="critico"] { --c: var(--critico); --ctx: var(--critico-tx); --cs: var(--critico-suave); }
+  [data-nivel="sindato"] { --c: var(--sindato); --ctx: var(--sindato-tx); --cs: var(--sindato-suave); }
+  [data-nivel="info"]    { --c: var(--info);    --ctx: var(--info-tx);    --cs: #E3E9F8; }
 
   [hidden] { display: none !important; }
   *, *::before, *::after { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--pizarron); color: var(--tinta); font: 400 17px/1.5 var(--fuente); }
-  button { font: inherit; color: inherit; }
+  button, input, select { font: inherit; color: inherit; }
   :focus-visible { outline: 3px solid var(--marcador); outline-offset: 2px; }
 
   .pagina { max-width: 1240px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 48px) 72px; }
@@ -53,15 +54,37 @@
   .sub { margin: 6px 0 0; color: var(--tinta-suave); font-size: 18px; }
   .nota { margin: 0 0 14px; color: var(--tinta-suave); font-size: 15px; }
 
+  /* ---------- Animación "respirando" (borde que brilla y se apaga) ---------- */
+  @keyframes respirar-ambar {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(224, 161, 0, 0); }
+    50%      { box-shadow: 0 0 0 4px rgba(224, 161, 0, .45), 0 0 18px 2px rgba(224, 161, 0, .35); }
+  }
+  @keyframes respirar-rojo {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(208, 56, 42, 0); }
+    50%      { box-shadow: 0 0 0 4px rgba(208, 56, 42, .45), 0 0 18px 2px rgba(208, 56, 42, .35); }
+  }
+
   /* ---------- Cabecera ---------- */
   .cabecera { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
-  .conexion-caja { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; color: var(--tinta-suave); font-size: 15px; }
+  .conexion-caja { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; color: var(--tinta-suave); font-size: 15px; text-align: right; }
   .conexion { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px 5px 10px; border: 1.5px solid var(--c); border-radius: 999px; background: var(--tablero); color: var(--ctx); font-weight: 600; }
   .conexion i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 
-  /* ---------- Aviso de alarma ---------- */
-  .aviso { margin: 0 0 28px; padding: 14px 18px; border-left: 8px solid var(--c); border-radius: 6px; background: #F7E3B0; font-size: 18px; }
-  .aviso[data-nivel="critico"] { background: #F6CFCA; }
+  /* ---------- Avisos (lista desplegable) ---------- */
+  .aviso { position: relative; margin: 0 0 28px; border: 2px solid var(--c); border-left-width: 8px; border-radius: 8px; background: var(--cs); }
+  .aviso::after { content: ""; position: absolute; inset: -2px -2px -2px -8px; border-radius: 8px; pointer-events: none; animation: respirar-ambar 3.2s ease-in-out infinite; }
+  .aviso[data-nivel="critico"]::after { animation: respirar-rojo 1.8s ease-in-out infinite; }
+  .aviso-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; width: 100%; padding: 13px 16px; border: 0; background: none; text-align: left; font-size: 18px; cursor: pointer; }
+  .aviso-cab:disabled { cursor: default; }
+  .aviso-titulo { font-weight: 700; color: var(--ctx); }
+  .aviso-msg { flex: 1 1 260px; }
+  .aviso-mas { color: var(--tinta-suave); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .aviso-flecha { align-self: center; width: 10px; height: 10px; margin-left: 4px; border-right: 2.5px solid var(--tinta-suave); border-bottom: 2.5px solid var(--tinta-suave); transform: rotate(45deg) translateY(-3px); transition: transform .2s; }
+  .aviso-cab[aria-expanded="true"] .aviso-flecha { transform: rotate(-135deg) translateY(-3px); }
+  .aviso-lista { list-style: none; margin: 0; padding: 0 16px 12px; border-top: 1px solid rgba(20, 33, 63, .12); }
+  .aviso-lista li { display: grid; grid-template-columns: 12px 1fr; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid rgba(20, 33, 63, .08); font-size: 16px; }
+  .aviso-lista li:last-child { border-bottom: 0; }
+  .aviso-lista li i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); transform: translateY(1px); }
 
   /* ---------- Esquema + lecturas ---------- */
   .principal { display: grid; gap: 32px; grid-template-columns: minmax(0, 1.3fr) minmax(320px, .9fr); align-items: start; }
@@ -89,8 +112,7 @@
   .tag-etq { font-size: 13px; font-weight: 500; color: var(--tinta-suave); }
   .tag-val { font: 600 22px/1.1 var(--fuente-num); font-variant-numeric: tabular-nums; }
   .tag.sel { outline: 3px solid var(--marcador); outline-offset: 2px; }
-  .tag[data-nivel="critico"] { animation: pulso 1.6s ease-out infinite; }
-  @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(208, 56, 42, .55); } 100% { box-shadow: 0 0 0 12px rgba(208, 56, 42, 0); } }
+  .tag[data-nivel="critico"] { animation: respirar-rojo 1s ease-in-out infinite; }
 
   /* En pantallas angostas las etiquetas pasan a ser puntos de color */
   @container (max-width: 540px) {
@@ -113,7 +135,7 @@
   .valor { grid-column: 3; grid-row: 1; text-align: right; white-space: nowrap; }
   .valor b { font: 600 40px/1 var(--fuente-num); font-variant-numeric: tabular-nums; }
   .valor i { margin-left: 4px; font-style: normal; font-size: 16px; color: var(--tinta-suave); }
-  .fila[data-tipo="estado"] .valor b, .fila[data-tipo="alarma"] .valor b { font-size: 30px; color: var(--ctx); }
+  .fila[data-tipo="alarma"] .valor b { font-size: 30px; color: var(--ctx); }
   .fila[data-nivel="sindato"] .valor b { color: var(--sindato-tx); }
 
   .medidor { grid-column: 2 / -1; grid-row: 2; position: relative; height: 10px; margin-top: 6px; border-radius: 5px; background: var(--critico-bg); }
@@ -122,6 +144,14 @@
   .medidor .z-ok { background: var(--ok-bg); }
   .aguja { position: absolute; top: -5px; width: 4px; height: 20px; margin-left: -2px; background: var(--tinta); border: 1px solid var(--tablero); border-radius: 2px; transition: left .6s ease; }
   .extremos { grid-column: 2 / -1; grid-row: 3; display: flex; justify-content: space-between; font-size: 13px; color: var(--tinta-suave); }
+
+  /* Sensores de gas individuales */
+  .gas-lista { grid-column: 2 / -1; grid-row: 2; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); margin-top: 8px; }
+  .gas-sensor { display: flex; flex-direction: column; gap: 1px; padding: 8px 11px 9px; border: 2px solid var(--c); border-radius: 7px; background: var(--cs); line-height: 1.25; }
+  .gas-sensor[data-nivel="critico"] { animation: respirar-rojo .9s ease-in-out infinite; }
+  .gs-nombre { font-weight: 600; font-size: 15px; }
+  .gs-estado { font: 600 21px/1.15 var(--fuente-num); color: var(--ctx); }
+  .gs-lect { font-size: 13px; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
 
   /* ---------- Secciones inferiores ---------- */
   .seccion { margin-top: 52px; }
@@ -134,47 +164,167 @@
   .segmento button[aria-pressed="true"] { background: var(--marcador); color: #fff; }
   .segmento button:focus-visible { outline-offset: -3px; }
 
-  .grafica { background: var(--tablero); border: 1px solid var(--linea); border-radius: 8px; padding: 8px; }
+  /* Gráfica */
+  .grafica { position: relative; background: var(--tablero); border: 1px solid var(--linea); border-radius: 8px; padding: 8px; }
+  #grafica-svg { touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: crosshair; }
   .grafica svg { display: block; width: 100%; }
   .grafica text { font: 400 13px var(--fuente); fill: var(--tinta-suave); }
-  .gz-crit { fill: var(--critico-bg); opacity: .5; }
-  .gz-alerta { fill: var(--alerta-bg); opacity: .7; }
-  .gz-ok { fill: var(--ok-bg); opacity: .7; }
-  .g-rejilla { stroke: var(--linea); stroke-width: 1; }
+  .gz-crit { fill: var(--critico-bg); opacity: .45; }
+  .gz-alerta { fill: var(--alerta-bg); opacity: .65; }
+  .gz-ok { fill: var(--ok-bg); opacity: .65; }
+  .g-rejilla { stroke: #FFFFFF; stroke-opacity: .85; stroke-width: 1.2; }
+  .g-rejilla-menor { stroke: #FFFFFF; stroke-opacity: .5; stroke-width: 1; }
+  .g-marco { fill: none; stroke: var(--linea); }
   .g-linea { fill: none; stroke: var(--marcador); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
   .g-punto { fill: var(--marcador); stroke: var(--tablero); stroke-width: 2; }
   .g-valor { font: 600 16px var(--fuente-num) !important; fill: var(--tinta) !important; }
+  .g-cruz { stroke: var(--tinta); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .g-cursor { fill: var(--tablero); stroke: var(--marcador); stroke-width: 3; }
+  .tooltip { position: absolute; z-index: 2; min-width: 150px; padding: 8px 11px; border: 1.5px solid var(--marcador); border-radius: 7px; background: var(--tablero); box-shadow: 0 4px 14px rgba(20, 33, 63, .18); pointer-events: none; line-height: 1.25; }
+  .tt-fecha { font-size: 13px; color: var(--tinta-suave); white-space: nowrap; }
+  .tt-valor { font: 600 26px/1.1 var(--fuente-num); font-variant-numeric: tabular-nums; }
+  .tt-valor span { font: 400 15px var(--fuente); color: var(--tinta-suave); }
+  .tt-estado { font-size: 14px; font-weight: 600; color: var(--ctx); }
   .leyenda { margin: 10px 2px 0; color: var(--tinta-suave); font-size: 15px; }
 
-  .pie { display: grid; gap: 44px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
-  .bitacora ul { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow: auto; border-top: 1px solid var(--linea); }
-  .bitacora li { display: grid; grid-template-columns: auto 12px 1fr; gap: 12px; align-items: baseline; padding: 9px 4px; border-bottom: 1px solid var(--linea); }
-  .bitacora time { font: 600 17px var(--fuente-num); font-variant-numeric: tabular-nums; color: var(--tinta-suave); }
-  .bitacora li i { align-self: center; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .pie { display: grid; gap: 44px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); align-items: start; }
 
-  .lista-check { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--linea); }
+  /* Bitácora */
+  .bit-cab { margin-bottom: 12px; }
+  .hist-estado { display: inline-flex; align-items: center; gap: 7px; padding: 3px 11px; border: 1.5px solid var(--c); border-radius: 999px; background: var(--tablero); color: var(--ctx); font-size: 13px; font-weight: 600; }
+  .hist-estado::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .filtros { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; font-size: 15px; }
+  .filtros select, .form-rev input, .form-rev select { padding: 6px 8px; border: 1.5px solid var(--linea); border-radius: 6px; background: var(--tablero); }
+  .filtros select:focus-visible, .form-rev input:focus-visible, .form-rev select:focus-visible { outline: 3px solid var(--marcador); outline-offset: 1px; }
+  .filtros .conteo { color: var(--tinta-suave); margin-left: auto; }
+  .bitacora ul { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow: auto; border-top: 1px solid var(--linea); }
+  .bitacora li.ev { display: grid; grid-template-columns: auto 12px 1fr; gap: 12px; align-items: baseline; padding: 9px 4px; border-bottom: 1px solid var(--linea); }
+  .bitacora time { display: flex; flex-direction: column; align-items: flex-end; min-width: 64px; line-height: 1.15; }
+  .bitacora time b { font: 600 17px var(--fuente-num); font-variant-numeric: tabular-nums; color: var(--tinta-suave); }
+  .bitacora time small { font-size: 12px; color: var(--tinta-suave); }
+  .bitacora li.ev i { align-self: center; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .bitacora li.ev[data-tipo="lectura"] span { color: var(--tinta-suave); }
+  .bitacora li.sep { position: sticky; top: 0; z-index: 1; display: flex; justify-content: center; padding: 8px 0 6px; background: var(--pizarron); }
+  .bitacora li.sep span { padding: 2px 12px; border-radius: 999px; background: var(--marco); color: var(--tinta); font-size: 13px; font-weight: 600; }
+  .bitacora li.vacio { padding: 14px 4px; color: var(--tinta-suave); }
+  .bitacora .mas { display: block; margin: 10px auto 0; }
+
+  /* Revisiones de seguridad */
+  .lista-check { list-style: none; margin: 0 0 14px; padding: 0; border-top: 1px solid var(--linea); }
   .lista-check li { border-bottom: 1px solid var(--linea); }
   .lista-check label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 4px; cursor: pointer; }
   .lista-check input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--marcador); }
+  .form-rev { display: grid; gap: 10px 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 14px; }
+  .form-rev label { display: flex; flex-direction: column; gap: 4px; font-size: 15px; font-weight: 500; }
   .check-pie { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; color: var(--tinta-suave); font-size: 15px; }
+  .rev-error { margin: 10px 0 0; color: var(--ctx, var(--critico-tx)); font-weight: 600; font-size: 15px; }
+  .rev-ultimas { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 16px 0 10px; font-size: 15px; }
+  .rev-ultimas dt { color: var(--tinta-suave); }
+  .rev-ultimas dd { margin: 0; font-weight: 600; }
 
   .boton { padding: 10px 18px; border: 0; border-radius: 6px; background: var(--marcador); color: #fff; font-weight: 600; cursor: pointer; }
   .boton:hover { background: #1B379A; }
   .boton-sec { padding: 8px 14px; border: 1.5px solid var(--marcador); border-radius: 6px; background: var(--tablero); font-weight: 500; cursor: pointer; }
+  .boton-sec:hover { background: #E3E9F8; }
   .boton-sec[aria-pressed="true"] { background: var(--marcador); color: #fff; }
+
+  /* Acceso (login) */
+  .acceso { display: grid; place-items: center; min-height: 100vh; padding: 24px 16px; }
+  .acceso-tarjeta { width: min(420px, 100%); padding: 28px 26px 22px; border: 8px solid var(--marco); border-radius: 10px; background: var(--tablero); }
+  .acceso-marca { margin: 0 0 4px; font: 600 15px var(--fuente); letter-spacing: .08em; text-transform: uppercase; color: var(--tinta-suave); }
+  .form-acceso, .dlg-form form { display: flex; flex-direction: column; gap: 14px; margin-top: 22px; }
+  .dlg-form form { margin-top: 0; }
+  .form-acceso label, .dlg-form label { display: flex; flex-direction: column; gap: 5px; font-size: 15px; font-weight: 500; }
+  .form-acceso input, .dlg-form input { padding: 10px 12px; border: 1.5px solid var(--linea); border-radius: 6px; background: #fff; font-size: 17px; }
+  .form-acceso input:focus-visible, .dlg-form input:focus-visible { outline: 3px solid var(--marcador); outline-offset: 1px; }
+  .form-acceso .boton { margin-top: 4px; padding: 12px; font-size: 17px; }
+  .acceso-nota { margin: 18px 0 0; font-size: 14px; }
+  .dlg-form { width: min(440px, calc(100vw - 24px)); }
+  .dlg-form h2 { margin: 0; }
+  .dlg-botones { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sesion { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; gap: 2px 12px; font-size: 14px; }
+  .sesion #usuario-nombre { font-weight: 600; color: var(--tinta); }
+  .enlace { padding: 0; border: 0; background: none; color: var(--marcador); font-size: 14px; font-weight: 500; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .boton:disabled { opacity: .7; cursor: wait; }
+
+  /* Responsable y fotos de la revisión */
+  .campo-resp { display: flex; flex-direction: column; gap: 4px; font-size: 15px; font-weight: 500; }
+  .campo-resp b { padding: 6px 0; font-size: 17px; }
+  .fotos { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 16px; }
+  .boton-foto { display: inline-flex; align-items: center; gap: 8px; }
+  .fotos-conteo { font-size: 15px; font-weight: 600; color: var(--ctx); }
+  .fotos-prev { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+  .fotos-prev:empty { display: none; }
+  .fotos-prev figure { position: relative; margin: 0; }
+  .fotos-prev img { display: block; width: 76px; height: 76px; object-fit: cover; border-radius: 6px; border: 1.5px solid var(--linea); }
+  .fotos-prev button { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--critico); color: #fff; font-size: 17px; line-height: 1; cursor: pointer; }
+  .rev-fotos { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 14px 74px; font-size: 14px; color: var(--tinta-suave); }
+  .rev-fotos img { display: block; width: 96px; height: 96px; object-fit: cover; border-radius: 6px; border: 1.5px solid var(--linea); }
+
+  /* Ventana de historial */
+  dialog { width: min(640px, calc(100vw - 24px)); max-height: min(85vh, 760px); padding: 0; border: 0; border-radius: 10px; background: var(--pizarron); color: var(--tinta); box-shadow: 0 18px 50px rgba(20, 33, 63, .35); }
+  dialog::backdrop { background: rgba(20, 33, 63, .45); }
+  .dlg-cab { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px 12px; background: var(--pizarron); border-bottom: 1px solid var(--linea); }
+  .dlg-cab h2 { margin: 0; }
+  .dlg-cerrar { width: 38px; height: 38px; border: 1.5px solid var(--marcador); border-radius: 6px; background: var(--tablero); font-size: 24px; line-height: 1; cursor: pointer; }
+  .dlg-cuerpo { padding: 14px 18px 18px; }
+  .rev-tarjeta { margin-bottom: 10px; border: 1.5px solid var(--linea); border-radius: 8px; background: var(--tablero); }
+  .rev-tarjeta[open] { border-color: var(--marcador); }
+  .rev-tarjeta summary { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 14px; align-items: center; padding: 11px 14px; cursor: pointer; list-style: none; }
+  .rev-tarjeta summary::-webkit-details-marker { display: none; }
+  .rev-num { grid-row: 1 / 3; display: grid; place-items: center; min-width: 46px; height: 46px; padding: 0 6px; border-radius: 8px; background: var(--marcador); color: #fff; font: 700 22px var(--fuente-num); }
+  .rev-fecha { font-weight: 600; }
+  .rev-detalle { grid-column: 2; font-size: 14px; color: var(--tinta-suave); }
+  .rev-puntos { grid-row: 1 / 3; grid-column: 3; font: 600 18px var(--fuente-num); color: var(--ctx); }
+  .rev-items { list-style: none; margin: 0; padding: 4px 14px 12px 74px; }
+  .rev-items li { display: flex; gap: 10px; padding: 5px 0; border-top: 1px solid var(--linea); font-size: 15px; }
+  .rev-items li b { width: 18px; color: var(--ctx); }
 
   .demo { padding: 18px 20px; border: 2px dashed var(--marcador); border-radius: 8px; }
   .demo h2 { font-size: 22px; margin-bottom: 4px; }
   .demo-botones { display: flex; flex-wrap: wrap; gap: 10px; }
 
+  @media (max-width: 560px) {
+    .valor b { font-size: 34px; }
+    .fila[data-tipo="alarma"] .valor b { font-size: 24px; }
+    .gas-lista { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    .aviso-cab { font-size: 16px; }
+    .rev-items { padding-left: 14px; }
+    .rev-fotos { padding-left: 14px; }
+    .segmento button { padding: 6px 10px; }
+  }
+
+  /* Sin animaciones para quien las desactiva: borde fijo más grueso */
   @media (prefers-reduced-motion: reduce) {
-    .tag[data-nivel="critico"] { animation: none; }
-    .aguja { transition: none; }
+    .aviso::after, .tag[data-nivel="critico"], .gas-sensor[data-nivel="critico"] { animation: none; }
+    .aviso::after { box-shadow: 0 0 0 3px var(--c); }
+    .gas-sensor[data-nivel="critico"], .tag[data-nivel="critico"] { box-shadow: 0 0 0 3px var(--critico); }
+    .aguja, .aviso-flecha { transition: none; }
   }
 </style>
 </head>
 <body>
-<div class="pagina">
+<div id="acceso" class="acceso">
+  <div class="acceso-tarjeta">
+    <p class="acceso-marca">MetaBiol</p>
+    <h1>Biodigestor</h1>
+    <p class="sub">Monitoreo en tiempo real</p>
+    <form id="form-login" class="form-acceso" hidden>
+      <label>Usuario
+        <input id="login-correo" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="grupo, docentes o mantenimiento" required>
+      </label>
+      <label>Contraseña
+        <input id="login-clave" type="password" autocomplete="current-password" required>
+      </label>
+      <button id="login-btn" class="boton" type="submit">Entrar</button>
+    </form>
+    <p id="acceso-cargando" class="nota">Cargando…</p>
+    <p id="login-error" class="rev-error" data-nivel="critico" role="alert" hidden></p>
+    <p class="nota acceso-nota">¿No tienes cuenta u olvidaste tu contraseña? Pídela al administrador del proyecto.</p>
+  </div>
+</div>
+
+<div id="app" class="pagina" hidden>
 
   <header class="cabecera">
     <div>
@@ -184,17 +334,26 @@
     <div class="conexion-caja">
       <span id="conexion" class="conexion" data-nivel="sindato"><i></i><span id="conexion-texto">Conectando</span></span>
       <span id="ultima">Sin lecturas todavía</span>
+      <span id="sesion" class="sesion"><span id="usuario-nombre"></span><button id="btn-nombre" class="enlace" type="button">Cambiar nombre</button><button id="btn-salir" class="enlace" type="button">Cerrar sesión</button></span>
     </div>
   </header>
 
-  <div id="aviso" class="aviso" role="alert" hidden></div>
+  <div id="aviso" class="aviso" aria-live="polite" hidden>
+    <button id="aviso-cab" class="aviso-cab" type="button" aria-expanded="false" aria-controls="aviso-lista">
+      <span class="aviso-titulo"></span>
+      <span class="aviso-msg"></span>
+      <span class="aviso-mas"></span>
+      <span class="aviso-flecha" aria-hidden="true"></span>
+    </button>
+    <ul id="aviso-lista" class="aviso-lista" hidden></ul>
+  </div>
 
   <main>
     <div class="principal">
 
       <section aria-labelledby="t-esquema">
         <h2 id="t-esquema">Esquema del sistema</h2>
-        <p class="nota">Toca una lectura de temperatura, pH o presión para ver su tendencia.</p>
+        <p class="nota">Toca la lectura de temperatura o de presión para ver su tendencia.</p>
         <div class="tablero">
           <div class="lienzo">
             <svg viewBox="0 0 640 420" role="img" aria-label="Esquema del biodigestor: tolva, bomba, tanque digestor y línea de biogás con sus sensores">
@@ -241,9 +400,8 @@
                   <path d="M342 208q-7-7 0-14t0-14"/>
                   <path d="M404 208q-7-7 0-14t0-14"/>
                 </g>
-                <!-- Sondas de temperatura y pH -->
+                <!-- Sonda de temperatura -->
                 <path d="M388 170V236"/><circle class="punto" cx="388" cy="236" r="4.5"/>
-                <path d="M420 170V282"/><circle class="punto" cx="420" cy="282" r="4.5"/>
 
                 <!-- Línea de biogás -->
                 <path class="gas" d="M365 170V90H606" stroke-width="5.5"/>
@@ -251,9 +409,6 @@
                 <!-- Manómetro -->
                 <circle class="rell" cx="365" cy="122" r="14"/>
                 <path d="M365 122l7-8" stroke-width="2"/>
-                <!-- Válvula de gas -->
-                <path class="rell" d="M466 80L494 100V80L466 100Z"/>
-                <path d="M480 90V70M471 70H489"/>
                 <!-- Detector de fuga -->
                 <path d="M560 93V98"/>
                 <rect class="rell" x="549" y="98" width="22" height="14" rx="3"/>
@@ -288,24 +443,71 @@
           <div id="sel-ventana" class="segmento" role="group" aria-label="Ventana de tiempo"></div>
         </div>
       </div>
-      <div id="grafica" class="grafica"></div>
+      <div id="grafica" class="grafica">
+        <div id="grafica-svg"></div>
+        <div id="tooltip" class="tooltip" hidden></div>
+      </div>
       <p id="leyenda" class="leyenda"></p>
     </section>
 
     <div class="seccion pie">
       <section class="bitacora" aria-labelledby="t-bit">
-        <h2 id="t-bit">Bitácora de eventos</h2>
+        <div class="seccion-cab bit-cab">
+          <h2 id="t-bit">Bitácora de eventos</h2>
+          <span id="hist-estado" class="hist-estado" data-nivel="sindato" hidden></span>
+        </div>
+        <div class="filtros">
+          <select id="f-sensor" aria-label="Filtrar por sensor">
+            <option value="todos">Todos los sensores</option>
+            <option value="gas">Gas</option>
+            <option value="temperatura">Temperatura</option>
+            <option value="presion">Presión</option>
+            <option value="seguridad">Revisiones de seguridad</option>
+            <option value="sistema">Sistema y conexión</option>
+          </select>
+          <select id="f-tipo" aria-label="Filtrar por tipo de evento">
+            <option value="eventos">Todos los eventos</option>
+            <option value="alerta">Alertas y fallas</option>
+            <option value="normal">Regreso a normal</option>
+            <option value="conexion">Conexión y desconexión</option>
+            <option value="revision">Revisiones</option>
+            <option value="lectura">Lecturas (cada minuto)</option>
+          </select>
+          <span id="f-conteo" class="conteo"></span>
+        </div>
         <ul id="bitacora"></ul>
+        <button id="bit-mas" class="boton-sec mas" type="button" hidden>Mostrar más</button>
       </section>
 
       <section aria-labelledby="t-seg">
-        <h2 id="t-seg">Seguridad: revisión en sitio</h2>
-        <ul id="checklist" class="lista-check"></ul>
-        <div class="check-pie">
-          <button id="btn-visita" class="boton" type="button">Registrar visita</button>
-          <span id="resumen-check"></span>
-          <span id="ultima-visita"></span>
+        <div class="seccion-cab">
+          <h2 id="t-seg">Seguridad: revisión en sitio</h2>
+          <button id="btn-historial" class="boton-sec" type="button">Historial</button>
         </div>
+        <p id="rev-solo-ver" class="nota" hidden>Con esta cuenta puedes ver las revisiones, pero solo mantenimiento y docentes pueden registrarlas.</p>
+        <div id="rev-registro">
+        <ul id="checklist" class="lista-check"></ul>
+        <div class="form-rev">
+          <div class="campo-resp"><span>Responsable</span><b id="rev-resp"></b></div>
+          <label>Tipo de revisión
+            <select id="rev-tipo"></select>
+          </label>
+        </div>
+        <div class="fotos">
+          <label class="boton-sec boton-foto">Agregar fotos
+            <input id="rev-fotos" type="file" accept="image/*" multiple hidden>
+          </label>
+          <span id="fotos-conteo" class="fotos-conteo"></span>
+          <div id="fotos-prev" class="fotos-prev"></div>
+        </div>
+        <div class="check-pie">
+          <button id="btn-visita" class="boton" type="button">Registrar revisión</button>
+          <span id="resumen-check"></span>
+        </div>
+        <p id="rev-error" class="rev-error" role="alert" hidden></p>
+        </div>
+        <dl id="rev-ultimas" class="rev-ultimas"></dl>
+        <p id="rev-nota" class="nota">Las revisiones y sus fotos se guardan en el servidor y las ve todo el equipo. Se necesita al menos una foto para registrar.</p>
       </section>
     </div>
 
@@ -313,16 +515,48 @@
       <h2 id="t-demo">Prueba de alarmas</h2>
       <p class="nota">Solo aparece con datos simulados. Sirve para mostrar cómo reacciona la página.</p>
       <div class="demo-botones">
-        <button class="boton-sec" type="button" aria-pressed="false" data-demo="fuga">Simular fuga de gas</button>
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="fuga">Simular fuga en un sensor de gas</button>
         <button class="boton-sec" type="button" aria-pressed="false" data-demo="tempAlta">Temperatura alta</button>
-        <button class="boton-sec" type="button" aria-pressed="false" data-demo="phBajo">pH bajo</button>
-        <button class="boton-sec" type="button" aria-pressed="false" data-demo="sinPh">Cortar señal de pH</button>
-        <button class="boton-sec" type="button" data-demo="valvula">Abrir o cerrar válvula</button>
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="presionAlta">Presión alta</button>
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="sinTemp">Cortar señal de temperatura</button>
+        <button class="boton-sec" type="button" aria-pressed="false" data-demo="placaPresion">Desconectar placa de presión</button>
       </div>
     </section>
   </main>
 </div>
 
+<dialog id="dlg-nombre" class="dlg-form" aria-labelledby="t-nombre">
+  <form id="form-nombre" class="dlg-cuerpo">
+    <h2 id="t-nombre">¿Cómo te llamas?</h2>
+    <p class="nota">Esta cuenta la comparten varias personas, así que cada quien escribe su nombre. Se guarda solo en este dispositivo y se borra al cerrar sesión.</p>
+    <label>Nombre completo <input id="nombre-inp" type="text" maxlength="60" autocomplete="name" required></label>
+    <p id="nombre-err" class="rev-error" data-nivel="critico" hidden></p>
+    <button class="boton" type="submit">Guardar</button>
+  </form>
+</dialog>
+
+<dialog id="dlg-clave" class="dlg-form" aria-labelledby="t-clave">
+  <form id="form-clave" class="dlg-cuerpo">
+    <h2 id="t-clave">Nueva contraseña</h2>
+    <label>Contraseña nueva (mínimo 8 caracteres) <input id="clave-1" type="password" autocomplete="new-password" required></label>
+    <label>Repítela <input id="clave-2" type="password" autocomplete="new-password" required></label>
+    <p id="clave-err" class="rev-error" data-nivel="critico" hidden></p>
+    <div class="dlg-botones">
+      <button class="boton" type="submit">Guardar contraseña</button>
+      <button id="clave-cancelar" class="boton-sec" type="button">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-historial" aria-labelledby="t-hist">
+  <div class="dlg-cab">
+    <h2 id="t-hist">Historial de revisiones</h2>
+    <button id="dlg-cerrar" class="dlg-cerrar" type="button" aria-label="Cerrar">×</button>
+  </div>
+  <div id="hist-lista" class="dlg-cuerpo"></div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
 <script>
 (() => {
 'use strict';
@@ -331,165 +565,177 @@
    1. CONFIGURACIÓN  (lo primero que vas a tocar)
    ==================================================================
    modo:
-     'simulado'   -> datos inventados, para desarrollar la interfaz.
-     'http'       -> la página consulta una URL cada `intervaloMs`.
-     'websocket'  -> un servidor/ESP32 empuja datos por WebSocket.
-     'mqtt'       -> se suscribe a un broker MQTT (por WebSockets).
-
-   Formato de datos que la página entiende (JSON). Puedes mandar solo
-   algunas claves en cada mensaje; las que falten conservan su valor:
-     {
-       "temperatura": 36.4,        // °C
-       "ph": 7.1,
-       "presion": 1.8,             // kPa
-       "valvula_gas": "abierta",   // "abierta" | "cerrada" (o true/false)
-       "fuga_gas": false           // true = fuga detectada
-     }
+     'mqtt'       -> se suscribe al broker MQTT (lo que usan los sensores).
+     'simulado'   -> datos inventados, para probar la interfaz sin placas.
    ================================================================== */
 const CONFIG = {
-  modo: 'mqtt',            // 'mqtt' (actual), 'blynk' (anterior), 'simulado', 'http', 'websocket'
+  modo: 'mqtt',            // 'mqtt' (actual) o 'simulado' (sin placas ni servidor)
 
-  intervaloMs: 2000,       // frecuencia de consulta (simulado y http)
-  ventanaMaxMin: 30,       // minutos de historial que se guardan en memoria
+  intervaloMs: 2000,       // frecuencia del modo simulado
+  ventanaMaxMin: 30,       // minutos de historial de la gráfica que se guardan en memoria
   sinDatoMs: 15000,        // sin lecturas por este tiempo -> "Sin dato".
-                           // Súbelo si tus sensores reportan cada minuto.
+  muestraBitacoraMs: 60000,// cada cuánto se anota una lectura en la bitácora (1 min)
 
-  // Si el sensor de gas entrega un número (ppm o lectura analógica) en vez de
-  // true/false, pon aquí el umbral: a partir de ese valor se considera fuga.
-  fugaUmbral: null,
-
-  http:      { url: 'http://192.168.1.50/datos' },
-  websocket: { url: 'ws://192.168.1.50:81' },
-  // Blynk: cada sensor conectado a Blynk tiene su propio token de dispositivo
-  // (lo ves en Blynk.Console, columna "Token de autenticación"). Un mismo
-  // dispositivo puede tener varios pines virtuales (V0, V1...), uno por dato.
-  // Ejemplo con el sensor de gas: token "4CBdkg9I...", pin del valor "V0".
-  blynk: {
-    servidor: 'https://blynk.cloud',   // no cambiar salvo que usen su propio servidor
-    dispositivos: [
-      // Un objeto por cada dispositivo/placa de Blynk que tengan.
-      // 'pines' mapea cada parámetro de tu página al pin virtual de ESE dispositivo.
-      // Sensor de gas: V0 es la lectura cruda (ppm), V1 es el estado de alarma
-      // (0/1) que ya calcula el propio código del ESP32 — es lo que usamos aquí.
-      // Temperatura comparte el mismo ESP32 y token; su valor sale en V2.
-      { token: '4CBdkg9IQDW1BsqFaqNrJr_0i2LTCPZz', pines: { fuga_gas: 'V1' } },      // ESP32 de gas
-      { token: '-rcS8PSz0XmhZqXkZeD-It5ZAspqOjKQ', pines: { temperatura: 'V2' } }    // ESP32 de temperatura
-      // Cuando se sumen más sensores en Blynk con OTRO dispositivo/token, agrega
-      // otro objeto aquí, por ejemplo:
-      // { token: 'TOKEN_DEL_SENSOR_DE_PRESION', pines: { presion: 'V0' } },
-    ]
-  },
-  // MQTT: cada ESP32 publica en  <prefijo>/<id>/datos   (JSON, ej. {"fuga":0,"lectura":1234})
-  //                      y en   <prefijo>/<id>/estado  ("online" / "offline")
-  // El prefijo y los id deben ser IGUALES a PREFIJO y DISPOSITIVO en el código de cada ESP32.
+  // MQTT: cada placa publica en  <prefijo>/<id>/datos   (JSON)
+  //                    y en    <prefijo>/<id>/estado  ("online" / "offline")
+  // El prefijo y los id deben ser IGUALES a PREFIJO y DISPOSITIVO en el código de cada placa.
   mqtt: {
     // EMQX Serverless del proyecto (WebSocket seguro, puerto 8084).
     url: 'wss://yed42b16.ala.us-east-1.emqxsl.com:8084/mqtt',
-    // Usuario de SOLO LECTURA (en EMQX tiene prohibido publicar).
-    // Esta contraseña la puede ver cualquiera que abra el código de la página;
-    // por eso este usuario no puede mandar datos, solo escucharlos.
-    usuario: 'Pagina',
-    contrasena: 'U&7uqJE*',
-    // Para volver a pruebas con el broker público: url 'wss://broker.emqx.io:8084/mqtt'
-    // y usuario/contrasena vacíos (y en los ESP32: broker.emqx.io, 1883, sin TLS).
+    // El usuario y la contraseña MQTT de la página (de solo lectura) YA NO van aquí:
+    // se piden a Supabase después de iniciar sesión (tabla "ajustes").
+    usuario: '',
+    contrasena: '',
     prefijo: 'uttn-biodigestor-r7k2qx',
     dispositivos: [
-      // 'campos' traduce cada dato del JSON del ESP32 a un parámetro de esta página.
-      { id: 'gas', nombre: 'ESP32 de gas', campos: { fuga: 'fuga_gas' },
+      // 'campos' traduce cada dato del JSON de la placa a un parámetro de esta página.
+      // 'corto' es el nombre que sale en los avisos ("Placa de gas desconectada").
+      { id: 'gas', nombre: 'ESP32 de gas', corto: 'gas', campos: { fuga: 'fuga_gas' },
         // Nombre de cada sensor de gas, en el MISMO orden que PINES_SENSOR en Gas_MQTT.ino.
-        // Sirve para decir en la página cuál detectó la fuga.
         nombresSensores: ['MQ-2 (pin 34)', 'MQ-4 (pin 35)', 'MQ-4 (pin 32)'] },
-      { id: 'temperatura', nombre: 'ESP32 de temperatura', campos: { temp: 'temperatura' } },
-      { id: 'presion',     nombre: 'Placa de presión (UNO R4 WiFi)', campos: { psi: 'presion' } }
+      { id: 'temperatura', nombre: 'ESP32 de temperatura', corto: 'temperatura', campos: { temp: 'temperatura' } },
+      { id: 'presion',     nombre: 'Placa de presión (UNO R4 WiFi)', corto: 'presión', campos: { psi: 'presion' } }
     ]
+  },
+
+  // Supabase: login, historial 24/7 (lo llena EMQX) y revisiones con fotos.
+  // Esta llave es PÚBLICA: sin iniciar sesión no permite leer ni escribir nada.
+  // NUNCA pongan aquí la "secret key".
+  supabase: {
+    url: 'https://yedrhewssqdixkispjtv.supabase.co',
+    llave: 'sb_publishable_FXMJUHJyRe36fhH9VAuKsw_Ej_29rdh',
+    consultaMs: 15000      // cada cuánto se buscan eventos nuevos para la bitácora
+  },
+
+  // Cuentas compartidas: se entra con un nombre de usuario (grupo, docentes o mantenimiento).
+  // Supabase solo acepta correos, así que la página lo convierte en
+  //   <correo>+<usuario>@gmail.com   (ej. metabiol.proyecto+grupo@gmail.com)
+  // PEGA_AQUI: el Gmail del proyecto. Las cuentas en Supabase deben usar este mismo correo con +usuario.
+  cuentas: {
+    correoBase: 'metabiolproyecto@gmail.com',
+    nombres: { grupo: 'Grupo', docentes: 'Docentes', mantenimiento: 'Mantenimiento' },
+    // Quiénes pueden registrar revisiones (también lo exige la regla de Supabase)
+    registranRevisiones: ['mantenimiento', 'docentes']
   }
 };
 
 /* ==================================================================
    2. PARÁMETROS Y UMBRALES
    ==================================================================
-   OJO: los rangos son valores de ejemplo para arrancar. Hay que
-   confirmarlos con el profesor y con los sensores que se elijan.
      escala : rango que dibuja el medidor y la gráfica
      normal : zona verde
      alerta : zona ámbar (fuera de "normal" pero todavía tolerable)
      fuera de "alerta" = crítico
    ================================================================== */
 const PARAMETROS = [
-  { id: 'valvula_gas', nombre: 'Válvula de gas',          corto: 'Válvula de gas', tipo: 'estado' },
-  { id: 'ph',          nombre: 'pH',                      corto: 'pH',             tipo: 'numero', unidad: '',    dec: 2,
-    escala: [5, 9],    normal: [6.8, 7.6], alerta: [6.5, 8.0] },
-  { id: 'temperatura', nombre: 'Temperatura',             corto: 'Temperatura',    tipo: 'numero', unidad: '°C',  dec: 1,
-    // Rangos tomados de Temperatura.ino: óptimo entre 20 y 30 °C; alerta a ≥30 o ≤20.
-    // El código del ESP32 no define un nivel crítico; por ahora solo se marca crítico
-    // fuera de 10–45 °C. Confirmar con el equipo de temperatura.
-    escala: [10, 45],  normal: [20, 30],   alerta: [10, 45] },
-  { id: 'presion',     nombre: 'Presión del gas',         corto: 'Presión',        tipo: 'numero', unidad: 'PSI', dec: 2,
-    // El sensor mide de 0 a 10 PSI. Los rangos normal/alerta son PROVISIONALES:
-    // confirmarlos con el profesor y el equipo de presión.
-    escala: [0, 10],   normal: [0.1, 2],   alerta: [0, 4] },
-  { id: 'fuga_gas',    nombre: 'Detector de fuga de gas', corto: 'Fuga de gas',    tipo: 'alarma' }
+  { id: 'temperatura', sensor: 'temperatura', nombre: 'Temperatura', corto: 'Temperatura', tipo: 'numero', unidad: '°C', dec: 1,
+    // Rangos de Temperatura_MQTT.ino: normal entre 25 y 35 °C; crítico fuera de 10–45 °C.
+    escala: [10, 45],  normal: [25, 35],   alerta: [10, 45] },
+  { id: 'presion',     sensor: 'presion', nombre: 'Presión del gas', corto: 'Presión', tipo: 'numero', unidad: 'PSI', dec: 2,
+    // El sensor mide de 0 a 10 PSI. Rangos PROVISIONALES: confirmarlos con el profesor.
+    escala: [0, 10],   normal: [0, 2],     alerta: [0, 4] },
+  { id: 'fuga_gas',    sensor: 'gas', nombre: 'Detector de fuga de gas', corto: 'Fuga de gas', tipo: 'alarma' }
 ];
 
 /* Posición de cada sensor en el esquema (coordenadas del dibujo, 640 x 420).
    tag = donde se pinta la etiqueta, punto = donde apunta la línea guía. */
 const POSICION = {
   presion:     { tag: [262, 52],  punto: [352, 116] },
-  valvula_gas: { tag: [530, 42],  punto: [484, 72]  },
   fuga_gas:    { tag: [560, 160], punto: [560, 114] },
-  temperatura: { tag: [545, 232], punto: [392, 236] },
-  ph:          { tag: [545, 296], punto: [424, 282] }
+  temperatura: { tag: [545, 232], punto: [392, 236] }
 };
 
-/* Lista de seguridad (pizarrón: guarda en la tolva, visitas continuas, lugar).
-   Los dos últimos puntos son propuesta mía: ajústalos con tu equipo. */
+/* Lista de seguridad y tipos de revisión */
 const CHECKLIST = [
   'Guarda de seguridad colocada en la tolva',
   'Visita de inspección al biodigestor realizada',
   'Uniones y tuberías revisadas, sin olor a gas',
   'Lugar despejado, ventilado y sin fuentes de ignición'
 ];
+const TIPOS_REVISION = {
+  rutinaria: 'Rutinaria (al operar la tolva)',
+  mensual:   'Mensual (revisión detallada)'
+};
+const DIAS_REVISION_MENSUAL = 30;   // después de estos días sin revisión mensual, aparece el aviso
 
-const NOMBRE_MODO = { simulado: 'datos simulados', http: 'consulta HTTP', websocket: 'WebSocket', mqtt: 'MQTT', blynk: 'Blynk' };
+const NOMBRE_MODO = { simulado: 'datos simulados', mqtt: 'MQTT' };
+const LOCALE = 'es-MX';
 
 /* ==================================================================
-   3. ESTADO EN MEMORIA
+   3. UTILIDADES
    ================================================================== */
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
+const almacen = {   // localStorage con protección: si no está disponible, la página sigue funcionando
+  leer(clave, porDefecto) { try { const v = localStorage.getItem(clave); return v ? JSON.parse(v) : porDefecto; } catch (e) { return porDefecto; } },
+  escribir(clave, valor) { try { localStorage.setItem(clave, JSON.stringify(valor)); return true; } catch (e) { return false; } }
+};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const fmtHora  = t => new Date(t).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+const fmtHM    = t => new Date(t).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', hour12: false });
+const fmtCorta = t => new Date(t).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' }).replace('.', '');
+const fmtLarga = t => new Date(t).toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '');
+const inicioDia = t => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+function etiquetaDia(t) {
+  const dif = Math.round((inicioDia(Date.now()) - inicioDia(t)) / 86400000);
+  if (dif === 0) return 'Hoy';
+  if (dif === 1) return 'Ayer';
+  const op = { weekday: 'long', day: 'numeric', month: 'long' };
+  if (new Date(t).getFullYear() !== new Date().getFullYear()) op.year = 'numeric';
+  const s = new Date(t).toLocaleDateString(LOCALE, op);
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function edad(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `hace ${s} s`;
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  return 'hace más de 1 h';
+}
+function hace(t) {
+  const d = Math.floor((Date.now() - t) / 86400000);
+  if (d <= 0) return 'hoy';
+  if (d === 1) return 'hace 1 día';
+  return `hace ${d} días`;
+}
+
+/* ==================================================================
+   4. ESTADO EN MEMORIA
+   ================================================================== */
 const lecturas = {};      // id -> { valor, ts }
-const historial = {};     // id -> [{ t, v }]  (solo parámetros numéricos)
+const historial = {};     // id -> [{ t, v }]  (solo parámetros numéricos, para la gráfica)
 PARAMETROS.forEach(p => { if (p.tipo === 'numero') historial[p.id] = []; });
 let ultimaLectura = null;
-let detalleFuga = '';     // nombres de los sensores de gas que detectan fuga (ej. "Sensor 2, Sensor 3")
 let seleccion = 'temperatura';
 let ventanaMin = 15;
+let conexionActual = 'conectando';
+
+// Sensores de gas individuales
+const gas = { sensores: [], lecturas: [], ts: null };
+let gasPrevio = [];       // último estado anotado en la bitácora, por sensor
+const dispGas = () => CONFIG.mqtt.dispositivos.find(d => d.nombresSensores) || { nombresSensores: [] };
+const nombreGas = i => dispGas().nombresSensores[i] || `Sensor ${i + 1}`;
+const numGas = () => Math.max(1, dispGas().nombresSensores.length, gas.sensores.length);
+const gasVivo = ahora => gas.ts !== null && ahora - gas.ts <= CONFIG.sinDatoMs;
+
+// Estado de cada placa (online/offline). Se recuerda en el dispositivo para no
+// repetir en la bitácora "desconectado" cada vez que se abre la página.
+const CLAVE_PLACAS = 'biodigestor.placas';
+const estadoPlaca = {};
+const placasGuardadas = almacen.leer(CLAVE_PLACAS, {});
 
 /* Convierte lo que llegue del sensor a un valor limpio (o null si no sirve) */
 function normalizar(p, crudo) {
-  // Vacío, null u objetos raros nunca cuentan como lectura (evita falsas alarmas y 0 °C falsos)
   if (crudo === null || crudo === undefined || crudo === '' || typeof crudo === 'object') return null;
   if (p.tipo === 'numero') {
     const n = Number(crudo);
     return Number.isFinite(n) ? n : null;
   }
-  if (p.tipo === 'estado') {
-    if (typeof crudo === 'string') {
-      const s = crudo.trim().toLowerCase();
-      if (['abierta', 'abierto', 'open', 'on', '1', 'true'].includes(s)) return 'abierta';
-      if (['cerrada', 'cerrado', 'closed', 'close', 'off', '0', 'false'].includes(s)) return 'cerrada';
-      return null;
-    }
-    if (typeof crudo === 'number' || typeof crudo === 'boolean') return crudo ? 'abierta' : 'cerrada';
-    return null;
-  }
-  // alarma
-  if (typeof crudo === 'number' && CONFIG.fugaUmbral != null) return crudo >= CONFIG.fugaUmbral;
   if (typeof crudo === 'string') return ['1', 'true', 'on', 'fuga', 'si', 'sí'].includes(crudo.trim().toLowerCase());
   if (typeof crudo === 'number' || typeof crudo === 'boolean') return Boolean(crudo);
   return null;
 }
 
-/* Guarda datos sin redibujar (se usa también para el historial inicial) */
+/* Guarda datos sin redibujar */
 function guardar(datos, ts) {
   if (!datos || typeof datos !== 'object') return;
   for (const p of PARAMETROS) {
@@ -499,6 +745,7 @@ function guardar(datos, ts) {
     lecturas[p.id] = { valor: v, ts };
     if (p.tipo === 'numero') historial[p.id].push({ t: ts, v });
   }
+  if (Array.isArray(datos.gas_sensores)) aplicarGas(datos.gas_sensores, datos.gas_lecturas, ts);
   if (ultimaLectura === null || ts > ultimaLectura) ultimaLectura = ts;
 }
 
@@ -513,45 +760,56 @@ function recibir(datos) {
   actualizar();
 }
 
+/* Estado de cada sensor de gas + anotación en la bitácora cuando cambia */
+function aplicarGas(sensores, lects, ts) {
+  const estaba = gasVivo(ts);
+  gas.sensores = sensores.map(s => Boolean(Number(s)));
+  gas.lecturas = Array.isArray(lects) ? lects.map(Number) : [];
+  gas.ts = ts;
+  if (!estaba) gasPrevio = [];
+  gas.sensores.forEach((fuga, i) => {
+    const antes = gasPrevio[i];
+    if (antes === undefined ? fuga : antes !== fuga) {
+      const lec = Number.isFinite(gas.lecturas[i]) ? ` (lectura ${gas.lecturas[i]})` : '';
+      if (fuga) registrar(`Fuga de gas detectada en ${nombreGas(i)}${lec}`, 'critico', 'gas', 'alerta');
+      else      registrar(`${nombreGas(i)}: sin fuga de nuevo${lec}`, 'ok', 'gas', 'normal');
+    }
+    gasPrevio[i] = fuga;
+  });
+}
+const sensoresConFuga = () => gas.sensores.map((f, i) => (f ? nombreGas(i) : null)).filter(Boolean);
+
 /* ==================================================================
-   4. EVALUACIÓN DE ESTADO
+   5. EVALUACIÓN DE ESTADO
    ================================================================== */
+function clasificar(p, v) {
+  const [nmin, nmax] = p.normal, [amin, amax] = p.alerta;
+  if (v >= nmin && v <= nmax) return { nivel: 'ok', etiqueta: 'Normal', clave: 'ok' };
+  const detalle = v > nmax ? 'alto' : 'bajo';
+  const nivel = (v >= amin && v <= amax) ? 'alerta' : 'critico';
+  return { nivel, detalle, etiqueta: `${nivel === 'alerta' ? 'Alerta' : 'Crítico'}: valor ${detalle}`, clave: `${nivel}|${detalle}` };
+}
+
 function evaluar(p, ahora) {
+  if (p.tipo === 'alarma') {
+    if (!gasVivo(ahora)) return { nivel: 'sindato', etiqueta: 'Sin dato', valor: '—', unidad: '', pct: null, ts: gas.ts, clave: 'sindato' };
+    const con = sensoresConFuga();
+    return con.length
+      ? { nivel: 'critico', etiqueta: con.length === 1 ? '1 sensor con fuga' : `${con.length} sensores con fuga`, valor: 'Fuga detectada', unidad: '', pct: null, ts: gas.ts, clave: 'critico' }
+      : { nivel: 'ok', etiqueta: 'Todos sin fuga', valor: 'Sin fuga', unidad: '', pct: null, ts: gas.ts, clave: 'ok' };
+  }
   const l = lecturas[p.id];
   if (!l || ahora - l.ts > CONFIG.sinDatoMs) {
     return { nivel: 'sindato', etiqueta: 'Sin dato', valor: '—', unidad: '', pct: null, ts: l ? l.ts : null, clave: 'sindato' };
   }
-  const v = l.valor;
-  if (p.tipo === 'numero') {
-    const [nmin, nmax] = p.normal, [amin, amax] = p.alerta, [e0, e1] = p.escala;
-    const base = { valor: v.toFixed(p.dec), unidad: p.unidad, pct: Math.min(1, Math.max(0, (v - e0) / (e1 - e0))), ts: l.ts };
-    if (v >= nmin && v <= nmax) return { ...base, nivel: 'ok', etiqueta: 'Normal', clave: 'ok' };
-    const detalle = v > nmax ? 'alto' : 'bajo';
-    const nivel = (v >= amin && v <= amax) ? 'alerta' : 'critico';
-    return { ...base, nivel, detalle, etiqueta: `${nivel === 'alerta' ? 'Alerta' : 'Crítico'}: valor ${detalle}`, clave: `${nivel}|${detalle}` };
-  }
-  if (p.tipo === 'estado') {
-    return { nivel: 'info', etiqueta: '', valor: v === 'abierta' ? 'Abierta' : 'Cerrada', unidad: '', pct: null, ts: l.ts, clave: 'info|' + v };
-  }
-  return v
-    ? { nivel: 'critico', etiqueta: detalleFuga, valor: 'Fuga detectada', unidad: '', pct: null, ts: l.ts, clave: 'critico|' + detalleFuga }
-    : { nivel: 'ok', etiqueta: '', valor: 'Sin fuga', unidad: '', pct: null, ts: l.ts, clave: 'ok' };
+  const v = l.valor, [e0, e1] = p.escala;
+  return { ...clasificar(p, v), valor: v.toFixed(p.dec), unidad: p.unidad, pct: Math.min(1, Math.max(0, (v - e0) / (e1 - e0))), ts: l.ts };
 }
 
 /* ==================================================================
-   5. INTERFAZ
+   6. INTERFAZ: esquema, filas y sensores de gas
    ================================================================== */
-const filas = {}, tags = {};
-
-function hora(t) {
-  return new Date(t).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-}
-function edad(ms) {
-  const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 60) return `hace ${s} s`;
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
-  return 'hace más de 1 h';
-}
+const filas = {}, tags = {}, tarjetasGas = [];
 
 function construirTags() {
   const cont = $('#tags'), lideres = $('#lideres');
@@ -591,28 +849,212 @@ function construirFilas() {
       el.setAttribute('aria-pressed', 'false');
       el.addEventListener('click', () => seleccionar(p.id));
     }
-    let medidor = '';
+    let extra = '';
     if (esNum) {
       const [e0, e1] = p.escala, pct = v => ((v - e0) / (e1 - e0) * 100);
-      medidor =
+      extra =
         `<span class="medidor" aria-hidden="true">` +
           `<span class="z-alerta" style="left:${pct(p.alerta[0])}%;width:${pct(p.alerta[1]) - pct(p.alerta[0])}%"></span>` +
           `<span class="z-ok" style="left:${pct(p.normal[0])}%;width:${pct(p.normal[1]) - pct(p.normal[0])}%"></span>` +
           `<span class="aguja" hidden></span>` +
         `</span>` +
         `<span class="extremos" aria-hidden="true"><span>${e0}</span><span>${e1}</span></span>`;
+    } else {
+      extra = `<div class="gas-lista" role="list" aria-label="Sensores de gas"></div>`;
     }
     el.innerHTML =
       `<span class="barra"></span>` +
       `<span class="nombre">${p.nombre}<span class="linea-estado"><span class="estado"></span><span class="edad"></span></span></span>` +
-      `<span class="valor"><b>—</b><i></i></span>` + medidor;
+      `<span class="valor"><b>—</b><i></i></span>` + extra;
     cont.appendChild(el);
     filas[p.id] = {
       el, estado: $('.estado', el), edad: $('.edad', el),
-      val: $('.valor b', el), uni: $('.valor i', el), aguja: $('.aguja', el)
+      val: $('.valor b', el), uni: $('.valor i', el), aguja: $('.aguja', el), gasLista: $('.gas-lista', el)
     };
   }
 }
+
+/* Tarjetas de los sensores de gas: se actualizan en su lugar (sin recrearlas),
+   para que la animación de "respiración" no se reinicie cada segundo. */
+function pintarGas(ahora) {
+  const cont = filas.fuga_gas.gasLista, n = numGas(), vivo = gasVivo(ahora);
+  while (tarjetasGas.length < n) {
+    const el = document.createElement('div');
+    el.className = 'gas-sensor';
+    el.setAttribute('role', 'listitem');
+    el.innerHTML = '<span class="gs-nombre"></span><span class="gs-estado"></span><span class="gs-lect"></span>';
+    cont.appendChild(el);
+    tarjetasGas.push({ el, nombre: $('.gs-nombre', el), estado: $('.gs-estado', el), lect: $('.gs-lect', el) });
+  }
+  while (tarjetasGas.length > n) tarjetasGas.pop().el.remove();
+  tarjetasGas.forEach((t, i) => {
+    const tiene = vivo && i < gas.sensores.length;
+    const nivel = !tiene ? 'sindato' : (gas.sensores[i] ? 'critico' : 'ok');
+    if (t.el.dataset.nivel !== nivel) t.el.dataset.nivel = nivel;
+    t.nombre.textContent = nombreGas(i);
+    t.estado.textContent = nivel === 'sindato' ? 'Sin dato' : (nivel === 'critico' ? 'Fuga detectada' : 'Sin fuga');
+    t.lect.textContent = tiene && Number.isFinite(gas.lecturas[i]) ? `Lectura ${gas.lecturas[i]}` : '';
+  });
+}
+
+/* ==================================================================
+   7. HISTORIAL EN EL SERVIDOR (Supabase)
+   La página solo LEE con la llave pública. Quien escribe es EMQX
+   (lecturas cada minuto y eventos de las placas), las 24 horas.
+   ================================================================== */
+const SRV = CONFIG.modo === 'mqtt' && CONFIG.supabase && CONFIG.supabase.url ? CONFIG.supabase : null;
+let estadoServidor = SRV ? 'cargando' : 'apagado';
+let sb = null, usuarioActual = null;   // cliente de Supabase y usuario con sesión
+
+async function srv(ruta, cuerpo) {
+  const { data } = await sb.auth.getSession();
+  const op = { headers: { apikey: SRV.llave, 'Content-Type': 'application/json' }, cache: 'no-store' };
+  if (data.session) op.headers.Authorization = 'Bearer ' + data.session.access_token;
+  if (cuerpo) { op.method = 'POST'; op.body = JSON.stringify(cuerpo); }
+  const r = await fetch(`${SRV.url}/rest/v1/${ruta}`, op);
+  if (!r.ok) throw new Error('Servidor ' + r.status);
+  return r.json();
+}
+function marcarServidor(ok) {
+  const nuevo = ok ? 'ok' : 'error';
+  if (nuevo !== estadoServidor) { estadoServidor = nuevo; pintarEstadoServidor(); }
+}
+function pintarEstadoServidor() {
+  const el = $('#hist-estado');
+  el.hidden = !SRV;
+  el.dataset.nivel = estadoServidor === 'ok' ? 'ok' : (estadoServidor === 'error' ? 'critico' : 'sindato');
+  el.textContent = estadoServidor === 'ok' ? 'Historial compartido 24/7'
+    : (estadoServidor === 'error' ? 'Historial sin conexión, reintentando' : 'Cargando historial…');
+}
+const dispDe = id => CONFIG.mqtt.dispositivos.find(d => d.id === id);
+const dispNombre = id => (dispDe(id) || { nombre: id }).nombre;
+const sensorDe = id => (['gas', 'temperatura', 'presion'].includes(id) ? id : 'sistema');
+const campoDe = id => Object.keys((dispDe(id) || { campos: {} }).campos)[0];
+
+/* Un evento guardado por EMQX -> formato de la bitácora */
+function convertirEvento(f) {
+  const t = Date.parse(f.recibido), m = String(f.mensaje || '');
+  if (f.tipo === 'conexion') {
+    const off = /offline/i.test(m);
+    return { id: f.id, t, texto: `${dispNombre(f.dispositivo)}: ${off ? 'desconectada' : 'en línea'}`,
+             nivel: off ? 'alerta' : 'ok', sensor: sensorDe(f.dispositivo), tipo: 'conexion' };
+  }
+  // Los mensajes de las placas empiezan con un emoji que indica la gravedad
+  const nivel = /🔴/u.test(m) ? 'critico' : (/🟠|🔵|⚠/u.test(m) ? 'alerta' : (/🟢|✅/u.test(m) ? 'ok' : 'info'));
+  return { id: f.id, t, texto: m, nivel, sensor: sensorDe(f.dispositivo),
+           tipo: nivel === 'ok' ? 'normal' : (nivel === 'info' ? 'sistema' : 'alerta') };
+}
+
+const evServidor = [];       // del más antiguo al más reciente
+let hayAnteriores = true;
+async function cargarEventos(modo) {
+  try {
+    let filas;
+    if (modo === 'nuevos') {
+      const max = evServidor.length ? evServidor[evServidor.length - 1].id : 0;
+      filas = await srv(`eventos?select=*&id=gt.${max}&order=id.asc&limit=500`);
+      filas.forEach(f => evServidor.push(convertirEvento(f)));
+    } else {                   // carga inicial o "Mostrar más" (eventos más antiguos)
+      const min = evServidor.length ? evServidor[0].id : null;
+      filas = await srv(`eventos?select=*${min ? `&id=lt.${min}` : ''}&order=id.desc&limit=300`);
+      hayAnteriores = filas.length === 300;
+      evServidor.unshift(...filas.reverse().map(convertirEvento));
+    }
+    marcarServidor(true);
+    if (filas.length || modo !== 'nuevos') pintarBitacora();
+  } catch (e) { marcarServidor(false); }
+}
+
+/* Una lectura guardada (1 por minuto) -> texto para la bitácora */
+function lecturaComoEvento(f) {
+  const t = Date.parse(f.recibido), d = f.datos || {};
+  let texto, nivel = 'info';
+  if (f.dispositivo === 'gas') {
+    const s = Array.isArray(d.sensores) ? d.sensores : ('fuga' in d ? [d.fuga] : []);
+    const l = Array.isArray(d.lecturas) ? d.lecturas : ('lectura' in d ? [d.lectura] : []);
+    const fuga = s.some(x => Number(x));
+    nivel = fuga ? 'critico' : 'ok';
+    texto = `Gas: ${fuga ? 'fuga detectada' : 'sin fuga'} — ` +
+      s.map((x, i) => `${nombreGas(i)} ${Number(x) ? 'FUGA' : 'ok'}${Number.isFinite(Number(l[i])) ? ' ' + l[i] : ''}`).join(' · ');
+  } else {
+    const p = PARAMETROS.find(x => x.sensor === f.dispositivo), v = Number(d[campoDe(f.dispositivo)]);
+    if (p && Number.isFinite(v)) {
+      const c = clasificar(p, v);
+      nivel = c.nivel;
+      texto = `${p.nombre}: ${v.toFixed(p.dec)} ${p.unidad} (${c.etiqueta.toLowerCase()})`;
+    } else {
+      texto = `${dispNombre(f.dispositivo)}: ${JSON.stringify(d)}`;
+    }
+  }
+  return { id: f.id, t, texto, nivel, sensor: sensorDe(f.dispositivo), tipo: 'lectura' };
+}
+let lectServidor = [], lectFin = false, lectCargando = false;
+async function cargarLecturasBitacora(reiniciar) {
+  if (reiniciar) { lectServidor = []; lectFin = false; }
+  if (lectFin || lectCargando) return;
+  lectCargando = true;
+  const fs = $('#f-sensor').value;
+  if (!['todos', 'gas', 'temperatura', 'presion'].includes(fs)) { lectFin = true; lectCargando = false; pintarBitacora(); return; }
+  const filtro = fs === 'todos' ? '' : `&dispositivo=eq.${fs}`;
+  try {
+    const filas = await srv(`lecturas?select=id,recibido,dispositivo,datos${filtro}&order=id.desc&limit=300&offset=${lectServidor.length}`);
+    lectFin = filas.length < 300;
+    lectServidor.push(...filas.map(lecturaComoEvento));
+    marcarServidor(true);
+  } catch (e) { marcarServidor(false); }
+  lectCargando = false;
+  pintarBitacora();
+}
+
+/* Al abrir la página: rellena la gráfica con las lecturas de los últimos 30 min */
+async function precargarHistorial() {
+  try {
+    const desde = encodeURIComponent(new Date(Date.now() - CONFIG.ventanaMaxMin * 60000).toISOString());
+    const filas = await srv(`lecturas?select=recibido,dispositivo,datos&recibido=gte.${desde}&order=recibido.asc&limit=1000`);
+    for (const f of filas) {
+      const disp = dispDe(f.dispositivo);
+      if (!disp || !f.datos) continue;
+      for (const campo in disp.campos) {
+        const id = disp.campos[campo], v = Number(f.datos[campo]);
+        if (historial[id] && Number.isFinite(v)) historial[id].push({ t: Date.parse(f.recibido), v });
+      }
+    }
+    for (const id in historial) historial[id].sort((a, b) => a.t - b.t);
+    marcarServidor(true);
+    dibujarGrafica();
+  } catch (e) { marcarServidor(false); }
+}
+
+/* Ventanas largas (1 h, 24 h, 7 días): promedios calculados en el servidor */
+const CUBETA = { 60: 60, 1440: 300, 10080: 1800 };   // segundos por punto
+const serieCache = {};
+async function cargarSerie(p, min) {
+  const clave = p.id + '|' + min, c = serieCache[clave];
+  if (c && (c.cargando || Date.now() - c.ts < 60000)) return;
+  serieCache[clave] = { datos: c ? c.datos : [], ts: c ? c.ts : 0, cargando: true };
+  const cubeta = CUBETA[min];
+  try {
+    const filas = await srv('rpc/serie', {
+      p_disp: p.sensor, p_campo: campoDe(p.sensor),
+      p_desde: new Date(Date.now() - min * 60000).toISOString(), p_cubeta_seg: cubeta
+    });
+    serieCache[clave] = { ts: Date.now(), cargando: false,
+      datos: filas.map(f => ({ t: Date.parse(f.t) + cubeta * 500, v: f.prom, min: f.minimo, max: f.maximo })) };
+    marcarServidor(true);
+  } catch (e) {
+    serieCache[clave] = { datos: c ? c.datos : [], ts: Date.now(), cargando: false, error: true };
+    marcarServidor(false);
+  }
+  if (seleccion === p.id && ventanaMin === min) dibujarGrafica();
+}
+
+/* ==================================================================
+   8. GRÁFICA DE TENDENCIA (SVG a mano, sin librerías)
+   ================================================================== */
+const graf = { x: null, activo: false };   // posición del puntero/dedo sobre la gráfica
+const VENTANAS = { 5: '5 min', 15: '15 min', 30: '30 min', 60: '1 h', 1440: '24 h', 10080: '7 días' };
+// Cuadrícula vertical por ventana: [línea principal, línea secundaria] en ms ('dia' = medianoche local)
+const REJILLA_T = { 5: [60e3, 30e3], 15: [180e3, 90e3], 30: [300e3, 150e3], 60: [600e3, 300e3], 1440: [3 * 3600e3, 3600e3], 10080: ['dia', 6 * 3600e3] };
 
 function construirControlesGrafica() {
   const sp = $('#sel-param');
@@ -624,9 +1066,9 @@ function construirControlesGrafica() {
     sp.appendChild(b);
   });
   const sv = $('#sel-ventana');
-  [5, 15, 30].forEach(m => {
+  Object.keys(VENTANAS).map(Number).filter(m => SRV || m <= CONFIG.ventanaMaxMin).forEach(m => {
     const b = document.createElement('button');
-    b.type = 'button'; b.textContent = `${m} min`; b.dataset.min = m;
+    b.type = 'button'; b.textContent = VENTANAS[m]; b.dataset.min = m;
     b.setAttribute('aria-pressed', String(m === ventanaMin));
     b.addEventListener('click', () => {
       ventanaMin = m;
@@ -634,6 +1076,21 @@ function construirControlesGrafica() {
       dibujarGrafica();
     });
     sv.appendChild(b);
+  });
+
+  // Puntero (computadora): el recuadro sigue al mouse. Dedo (celular): tocar y deslizar.
+  const zona = $('#grafica-svg');
+  const posX = e => e.clientX - zona.getBoundingClientRect().left;
+  zona.addEventListener('pointerdown', e => { graf.activo = true; graf.x = posX(e); dibujarGrafica(); });
+  zona.addEventListener('pointermove', e => {
+    if (e.pointerType === 'mouse' || graf.activo) { graf.x = posX(e); dibujarGrafica(); }
+  });
+  zona.addEventListener('pointerleave', e => {
+    if (e.pointerType === 'mouse') { graf.x = null; graf.activo = false; dibujarGrafica(); }
+  });
+  document.addEventListener('pointerdown', e => {
+    // composedPath: la ruta se calcula al tocar, aunque la gráfica se redibuje en ese instante
+    if (graf.x !== null && !e.composedPath().includes($('#grafica'))) { graf.x = null; graf.activo = false; dibujarGrafica(); }
   });
 }
 
@@ -648,107 +1105,336 @@ function seleccionar(id) {
   const p = PARAMETROS.find(x => x.id === id);
   const u = p.unidad ? ' ' + p.unidad : '';
   $('#leyenda').textContent =
-    `Zona verde: normal (${p.normal[0]} a ${p.normal[1]}${u}). Zona ámbar: alerta (${p.alerta[0]} a ${p.alerta[1]}${u}). Fuera de eso, el estado es crítico.`;
+    `Zona verde: normal (${p.normal[0]} a ${p.normal[1]}${u}). Zona ámbar: alerta (${p.alerta[0]} a ${p.alerta[1]}${u}). Fuera de eso, el estado es crítico. ` +
+    `Pasa el puntero o toca la línea para ver cada lectura.` +
+    (SRV ? ' En 1 h, 24 h y 7 días se muestran promedios guardados en el servidor.' : '');
   dibujarGrafica();
 }
 
-/* ---------- Gráfica de tendencia (SVG dibujado a mano, sin librerías) ---------- */
+function pasoBonito(bruto) {
+  const pot = Math.pow(10, Math.floor(Math.log10(bruto)));
+  const f = bruto / pot;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * pot;
+}
+const RANGO = { ok: 0, alerta: 1, critico: 2 };
+
 function dibujarGrafica() {
   const p = PARAMETROS.find(x => x.id === seleccion);
-  const cont = $('#grafica');
-  const W = cont.clientWidth ? cont.clientWidth - 16 : 600, H = 280;
-  const m = { i: 50, d: 22, s: 14, b: 32 };
+  const cont = $('#grafica-svg'), tip = $('#tooltip');
+  const W = cont.clientWidth || 600, H = W < 480 ? 250 : 300;
+  const m = { i: 46, d: 16, s: 12, b: 30 };
   const pw = W - m.i - m.d, ph = H - m.s - m.b;
   const [ymin, ymax] = p.escala;
   const ahora = Date.now(), t0 = ahora - ventanaMin * 60000;
+  const largo = ventanaMin > CONFIG.ventanaMaxMin;
   const X = t => m.i + (t - t0) / (ahora - t0) * pw;
   const Y = v => m.s + (1 - (Math.min(Math.max(v, ymin), ymax) - ymin) / (ymax - ymin)) * ph;
 
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Gráfica de tendencia: ${p.nombre}">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Gráfica de tendencia: ${p.nombre}, ${VENTANAS[ventanaMin]}">`;
+  // Zonas de color
   s += `<rect class="gz-crit" x="${m.i}" y="${m.s}" width="${pw}" height="${ph}"/>`;
   s += `<rect class="gz-alerta" x="${m.i}" y="${Y(p.alerta[1])}" width="${pw}" height="${Y(p.alerta[0]) - Y(p.alerta[1])}"/>`;
   s += `<rect class="gz-ok" x="${m.i}" y="${Y(p.normal[1])}" width="${pw}" height="${Y(p.normal[0]) - Y(p.normal[1])}"/>`;
 
-  for (let i = 0; i <= 4; i++) {
-    const v = ymin + i * (ymax - ymin) / 4, y = Y(v);
-    s += `<line class="g-rejilla" x1="${m.i}" y1="${y}" x2="${W - m.d}" y2="${y}"/>`;
-    s += `<text x="${m.i - 8}" y="${y + 4}" text-anchor="end">${Number(v.toFixed(p.dec))}</text>`;
+  // Cuadrícula horizontal (valores): líneas principales con número y secundarias a la mitad
+  const paso = pasoBonito((ymax - ymin) / 7);
+  const decPaso = paso < 1 ? (paso < 0.1 ? 2 : 1) : 0;
+  for (let v = Math.ceil(ymin / (paso / 2)) * (paso / 2); v <= ymax + 1e-9; v += paso / 2) {
+    const principal = Math.abs(v / paso - Math.round(v / paso)) < 1e-6;
+    const y = Y(v).toFixed(1);
+    s += `<line class="${principal ? 'g-rejilla' : 'g-rejilla-menor'}" x1="${m.i}" y1="${y}" x2="${m.i + pw}" y2="${y}"/>`;
+    if (principal) s += `<text x="${m.i - 8}" y="${Number(y) + 4}" text-anchor="end">${v.toFixed(decPaso)}</text>`;
   }
-  const divisiones = W < 480 ? 2 : 5;
-  for (let i = 0; i <= divisiones; i++) {
-    const f = i / divisiones, x = m.i + f * pw;
-    const min = Number((ventanaMin * (1 - f)).toFixed(1));
-    const ancla = i === 0 ? 'start' : (i === divisiones ? 'end' : 'middle');
-    s += `<text x="${x}" y="${H - 8}" text-anchor="${ancla}">${min === 0 ? 'ahora' : `hace ${min} min`}</text>`;
+  // Cuadrícula vertical (tiempo)
+  const [tick, menor] = REJILLA_T[ventanaMin];
+  const lineasT = [];   // [t, principal]
+  for (let t = Math.ceil(t0 / menor) * menor; t <= ahora; t += menor) lineasT.push([t, tick !== 'dia' && t % tick === 0]);
+  if (tick === 'dia') {
+    const d = new Date(t0);
+    for (let k = 1; k <= 8; k++) {
+      const t = new Date(d.getFullYear(), d.getMonth(), d.getDate() + k).getTime();
+      if (t <= ahora) lineasT.push([t, true]);
+    }
   }
+  const etiquetaT = t => (tick === 'dia'
+    ? new Date(t).toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric' }).replace('.', '')
+    : fmtHM(t));
+  const saltoEtq = W < 480 && [5, 30, 60].includes(ventanaMin) ? 2 : 1;
+  let k = 0;
+  for (const [t, principal] of lineasT.sort((a, b) => a[0] - b[0])) {
+    const x = X(t).toFixed(1);
+    s += `<line class="${principal ? 'g-rejilla' : 'g-rejilla-menor'}" x1="${x}" y1="${m.s}" x2="${x}" y2="${m.s + ph}"/>`;
+    if (principal) {
+      if (k % saltoEtq === 0 && X(t) > m.i + 16 && X(t) < m.i + pw - 16) s += `<text x="${x}" y="${H - 9}" text-anchor="middle">${etiquetaT(t)}</text>`;
+      k++;
+    }
+  }
+  s += `<rect class="g-marco" x="${m.i}" y="${m.s}" width="${pw}" height="${ph}"/>`;
 
-  const puntos = historial[p.id].filter(q => q.t >= t0);
+  // Datos: memoria (5–30 min) o promedios del servidor (1 h, 24 h, 7 días)
+  let puntos, hueco, serie = null;
+  if (largo) {
+    cargarSerie(p, ventanaMin);
+    serie = serieCache[p.id + '|' + ventanaMin] || { datos: [], cargando: true };
+    puntos = serie.datos.filter(q => q.t >= t0);
+    hueco = CUBETA[ventanaMin] * 2500;
+  } else {
+    puntos = historial[p.id].filter(q => q.t >= t0);
+    hueco = 90000;   // más de 1.5 min sin datos = línea cortada
+  }
+  let resaltado = null;
   if (!puntos.length) {
-    s += `<text x="${m.i + pw / 2}" y="${m.s + ph / 2}" text-anchor="middle">Sin datos en esta ventana</text>`;
+    const msg = serie && serie.cargando ? 'Cargando historial…' : (serie && serie.error ? 'No se pudo cargar el historial' : 'Sin datos en esta ventana');
+    s += `<text x="${m.i + pw / 2}" y="${m.s + ph / 2}" text-anchor="middle">${msg}</text>`;
   } else {
     let d = '', previo = null;
     for (const q of puntos) {
-      const corte = previo === null || q.t - previo > CONFIG.sinDatoMs;   // hueco = línea cortada
+      const corte = previo === null || q.t - previo > hueco;
       d += `${corte ? 'M' : 'L'}${X(q.t).toFixed(1)} ${Y(q.v).toFixed(1)} `;
       previo = q.t;
     }
     s += `<path class="g-linea" d="${d}"/>`;
-    const u = puntos[puntos.length - 1];
-    s += `<circle class="g-punto" cx="${X(u.t)}" cy="${Y(u.v)}" r="5"/>`;
-    const izq = X(u.t) > W - 80;
-    s += `<text class="g-valor" x="${X(u.t) + (izq ? -10 : 10)}" y="${Y(u.v) - 10}" text-anchor="${izq ? 'end' : 'start'}">${u.v.toFixed(p.dec)}${p.unidad ? ' ' + p.unidad : ''}</text>`;
+
+    // Punto más cercano al puntero/dedo
+    if (graf.x !== null) {
+      const tx = t0 + (Math.min(Math.max(graf.x, m.i), m.i + pw) - m.i) / pw * (ahora - t0);
+      resaltado = puntos.reduce((a, b) => (Math.abs(b.t - tx) < Math.abs(a.t - tx) ? b : a));
+      const cx = X(resaltado.t).toFixed(1), cy = Y(resaltado.v).toFixed(1);
+      s += `<line class="g-cruz" x1="${cx}" y1="${m.s}" x2="${cx}" y2="${m.s + ph}"/>`;
+      s += `<circle class="g-cursor" cx="${cx}" cy="${cy}" r="6"/>`;
+    } else {
+      const u = puntos[puntos.length - 1];
+      s += `<circle class="g-punto" cx="${X(u.t)}" cy="${Y(u.v)}" r="5"/>`;
+      const izq = X(u.t) > W - 80;
+      s += `<text class="g-valor" x="${X(u.t) + (izq ? -10 : 10)}" y="${Y(u.v) - 10}" text-anchor="${izq ? 'end' : 'start'}">${u.v.toFixed(p.dec)}${p.unidad ? ' ' + p.unidad : ''}</text>`;
+    }
   }
   cont.innerHTML = s + '</svg>';
-}
 
-/* ---------- Bitácora ---------- */
-const bitacora = [];
-function registrar(texto, nivel = 'info') {
-  bitacora.unshift({ t: Date.now(), texto, nivel });
-  if (bitacora.length > 60) bitacora.pop();
-  $('#bitacora').innerHTML = bitacora
-    .map(e => `<li data-nivel="${e.nivel}"><time>${hora(e.t)}</time><i></i><span>${e.texto}</span></li>`)
-    .join('');
-}
-
-const previo = {};
-function mensajeLog(p, ev) {
-  const val = ev.valor + (ev.unidad ? ' ' + ev.unidad : '');
-  if (ev.nivel === 'sindato') return `${p.nombre}: sin dato`;
-  if (p.tipo === 'numero') {
-    if (ev.nivel === 'ok') return `${p.nombre}: normal (${val})`;
-    return `${p.nombre}: ${ev.nivel === 'alerta' ? 'alerta' : 'crítico'}, valor ${ev.detalle} (${val})`;
+  // Recuadro de información
+  if (!resaltado) { tip.hidden = true; return; }
+  let c = clasificar(p, resaltado.v), extra = '';
+  if (largo) {   // en promedios, el estado es el peor entre el mínimo y el máximo de ese periodo
+    const cmin = clasificar(p, resaltado.min), cmax = clasificar(p, resaltado.max);
+    c = [c, cmin, cmax].reduce((a, b) => (RANGO[b.nivel] > RANGO[a.nivel] ? b : a));
+    const minutos = CUBETA[ventanaMin] / 60;
+    extra = `<div class="tt-fecha">Promedio de ${minutos} min · mín ${resaltado.min.toFixed(p.dec)}, máx ${resaltado.max.toFixed(p.dec)}</div>`;
   }
-  if (p.tipo === 'estado') return `${p.nombre}: ${ev.valor.toLowerCase()}`;
-  if (ev.nivel === 'critico') return 'Fuga de gas detectada' + (detalleFuga ? ` (${detalleFuga})` : '');
-  return `${p.nombre}: sin fuga`;
+  tip.innerHTML =
+    `<div class="tt-fecha">${fmtLarga(resaltado.t)} · ${largo ? fmtHM(resaltado.t) : fmtHora(resaltado.t)}</div>` +
+    `<div class="tt-valor">${resaltado.v.toFixed(p.dec)} <span>${p.unidad}</span></div>` + extra +
+    `<div class="tt-estado" data-nivel="${c.nivel}">${c.etiqueta}</div>`;
+  tip.hidden = false;
+  const off = 8;   // padding del contenedor
+  const px = X(resaltado.t) + off, py = Y(resaltado.v) + off;
+  const tw = tip.offsetWidth, th = tip.offsetHeight, cw = $('#grafica').clientWidth;
+  let left = px + 14;
+  if (left + tw > cw - 4) left = px - tw - 14;
+  left = Math.max(4, left);
+  const top = Math.min(Math.max(4, py - th - 12), H + off - th);
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
 }
 
-/* ---------- Aviso superior ---------- */
-let avisoClave = '';
-function actualizarAviso(criticos, alertas) {
-  const clave = criticos.map(c => c.id).join(',') + '#' + alertas.map(a => a.id).join(',');
+/* ==================================================================
+   9. BITÁCORA
+   Con servidor: los eventos de los sensores vienen de Supabase (los mismos
+   para todos). En este dispositivo solo se guardan revisiones y avisos del sistema.
+   Sin servidor (modo simulado): todo se guarda en este dispositivo.
+   ================================================================== */
+const CLAVE_BIT = 'biodigestor.bitacora.v2';
+const LIMITE_EVENTOS = 6000;
+const DIAS_EVENTOS = 90, HORAS_LECTURAS = 24;
+let eventos = almacen.leer(CLAVE_BIT, []);
+if (!Array.isArray(eventos)) eventos = [];
+let limiteVista = 200, guardadoPendiente = null;
+
+/* tipo: 'alerta' | 'normal' | 'conexion' | 'revision' | 'lectura' | 'sistema'
+   sensor: 'gas' | 'temperatura' | 'presion' | 'seguridad' | 'sistema' */
+function registrar(texto, nivel = 'info', sensor = 'sistema', tipo = 'sistema') {
+  // Con servidor, lo de los sensores ya lo guarda EMQX: no se duplica aquí
+  if (SRV && (tipo === 'lectura' || tipo === 'revision' || ['gas', 'temperatura', 'presion'].includes(sensor))) return;
+  eventos.push({ t: Date.now(), texto, nivel, sensor, tipo });
+  if (tipo !== 'lectura') pintarBitacora();
+  programarGuardado();
+}
+function podar() {
+  const ahora = Date.now();
+  eventos = eventos.filter(e => ahora - e.t < (e.tipo === 'lectura' ? HORAS_LECTURAS * 3600000 : DIAS_EVENTOS * 86400000));
+  if (eventos.length > LIMITE_EVENTOS) eventos = eventos.slice(-LIMITE_EVENTOS);
+}
+function programarGuardado() {
+  if (guardadoPendiente) return;
+  guardadoPendiente = setTimeout(() => {
+    guardadoPendiente = null;
+    podar();
+    if (!almacen.escribir(CLAVE_BIT, eventos)) {   // si se llena el espacio, se queda con lo más reciente
+      eventos = eventos.filter(e => e.tipo !== 'lectura').slice(-2000);
+      almacen.escribir(CLAVE_BIT, eventos);
+    }
+  }, 2000);
+}
+
+function fuenteBitacora() {
+  if (!SRV) return eventos;
+  const locales = eventos.filter(e => e.tipo === 'sistema');
+  return evServidor.concat(locales, revisionesComoEventos()).sort((a, b) => a.t - b.t);
+}
+
+function pintarBitacora() {
+  const fs = $('#f-sensor').value, ft = $('#f-tipo').value;
+  let lista = [];
+  if (SRV && ft === 'lectura') {
+    lista = lectServidor;   // ya vienen de la más reciente a la más antigua
+  } else {
+    const fuente = fuenteBitacora();
+    for (let i = fuente.length - 1; i >= 0; i--) {
+      const e = fuente[i];
+      if (fs !== 'todos' && e.sensor !== fs) continue;
+      if (ft === 'eventos' ? e.tipo === 'lectura' : e.tipo !== ft) continue;
+      lista.push(e);
+    }
+  }
+  const masServidor = SRV && (ft === 'lectura' ? !lectFin : hayAnteriores);
+  $('#f-conteo').textContent = `${lista.length}${masServidor ? '+' : ''} ${lista.length === 1 ? 'registro' : 'registros'}`;
+  const vista = lista.slice(0, limiteVista);
+  let html = '', dia = null;
+  for (const e of vista) {
+    const d = inicioDia(e.t);
+    if (d !== dia) { dia = d; html += `<li class="sep"><span>${etiquetaDia(e.t)}</span></li>`; }
+    html += `<li class="ev" data-nivel="${e.nivel}" data-tipo="${e.tipo}"><time datetime="${new Date(e.t).toISOString()}"><b>${fmtHora(e.t)}</b><small>${fmtCorta(e.t)}</small></time><i></i><span>${esc(e.texto)}</span></li>`;
+  }
+  if (!vista.length) {
+    html = `<li class="vacio">${SRV && estadoServidor === 'cargando' ? 'Cargando historial…' : 'No hay registros con este filtro.'}</li>`;
+  }
+  $('#bitacora').innerHTML = html;
+  $('#bit-mas').hidden = !(lista.length > limiteVista || masServidor);
+}
+
+function construirBitacora() {
+  if (SRV) $('#f-tipo').querySelector('option[value="lectura"]').textContent = 'Lecturas guardadas (cada minuto)';
+  ['#f-sensor', '#f-tipo'].forEach(s => $(s).addEventListener('change', () => {
+    limiteVista = 200;
+    $('#bitacora').scrollTop = 0;
+    if (SRV && $('#f-tipo').value === 'lectura') cargarLecturasBitacora(true);
+    pintarBitacora();
+  }));
+  $('#bit-mas').addEventListener('click', () => {
+    const ft = $('#f-tipo').value;
+    if (SRV && ft === 'lectura') { limiteVista += 300; cargarLecturasBitacora(false); return; }
+    const total = fuenteBitacora().length;
+    limiteVista += 200;
+    if (SRV && limiteVista >= total && hayAnteriores) cargarEventos('anteriores');
+    else pintarBitacora();
+  });
+  podar();
+  pintarEstadoServidor();
+  pintarBitacora();
+}
+
+/* Sin servidor: anota una lectura de cada sensor cada minuto (filtro "Lecturas") */
+let ultimaMuestra = 0;
+function muestrearLecturas(ahora) {
+  if (SRV || ahora - ultimaMuestra < CONFIG.muestraBitacoraMs) return;
+  ultimaMuestra = ahora;
+  let alguna = false;
+  for (const p of PARAMETROS) {
+    if (p.tipo !== 'numero') continue;
+    const ev = evaluar(p, ahora);
+    if (ev.nivel === 'sindato') continue;
+    registrar(`${p.nombre}: ${ev.valor} ${p.unidad} (${ev.etiqueta.toLowerCase()})`, ev.nivel, p.sensor, 'lectura');
+    alguna = true;
+  }
+  if (gasVivo(ahora)) {
+    const det = gas.sensores.map((f, i) => `${nombreGas(i)} ${f ? 'FUGA' : 'ok'}${Number.isFinite(gas.lecturas[i]) ? ' ' + gas.lecturas[i] : ''}`).join(' · ');
+    registrar(`Gas: ${sensoresConFuga().length ? 'fuga detectada' : 'sin fuga'} — ${det}`, sensoresConFuga().length ? 'critico' : 'ok', 'gas', 'lectura');
+    alguna = true;
+  }
+  if (alguna && $('#f-tipo').value === 'lectura') pintarBitacora();
+}
+
+/* ==================================================================
+   10. AVISOS (lista desplegable)
+   ================================================================== */
+const CLAVE_AVISO = 'biodigestor.avisoAbierto';
+let avisoAbierto = almacen.leer(CLAVE_AVISO, false), avisoClave = '';
+
+function calcularAvisos(ahora) {
+  const items = [];
+  if (CONFIG.modo === 'mqtt' && conexionActual === 'desconectado') {
+    items.push({ nivel: 'alerta', texto: 'Sin conexión con el servidor de datos. Revisa el internet de este dispositivo.' });
+  }
+  // Fugas: una línea por sensor
+  if (gasVivo(ahora)) {
+    sensoresConFuga().forEach(n => items.push({ nivel: 'critico', texto: `Fuga de gas detectada en ${n}. Ventila la zona y evita flamas y chispas.` }));
+  }
+  // Placas desconectadas (sus parámetros ya no generan "sin lecturas" aparte)
+  const cubiertos = new Set();
+  for (const d of CONFIG.mqtt.dispositivos) {
+    if (estadoPlaca[d.id] !== 'offline') continue;
+    items.push({ nivel: 'alerta', texto: `Placa de ${d.corto} desconectada: sus sensores no están enviando datos.` });
+    Object.values(d.campos).forEach(id => cubiertos.add(id));
+  }
+  // Valores fuera de rango y sensores sin lecturas
+  for (const p of PARAMETROS) {
+    const ev = evaluar(p, ahora);
+    if (p.tipo === 'numero' && (ev.nivel === 'critico' || ev.nivel === 'alerta')) {
+      const r = ev.nivel === 'alerta' ? `normal de ${p.normal[0]} a ${p.normal[1]} ${p.unidad}` : `límite ${ev.detalle === 'alto' ? p.alerta[1] : p.alerta[0]} ${p.unidad}`;
+      items.push({ nivel: ev.nivel, texto: `${p.nombre} ${ev.nivel === 'critico' ? 'en estado crítico' : (ev.detalle === 'alto' ? 'alta' : 'baja')}: ${ev.valor} ${p.unidad} (${r}).` });
+    } else if (ev.nivel === 'sindato' && !cubiertos.has(p.id) && conexionActual !== 'desconectado') {
+      items.push({ nivel: 'alerta', texto: p.tipo === 'alarma' ? 'Sin señal del detector de fuga de gas.' : `Sin lecturas de ${p.nombre.toLowerCase()} en los últimos ${CONFIG.sinDatoMs / 1000} s.` });
+    }
+  }
+  // Revisión de seguridad
+  const ult = ultimaRevision('mensual');
+  if (!revisionesCargadas) {
+    // todavía no llegan las revisiones del servidor
+  } else if (!ult) {
+    items.push({ nivel: 'alerta', texto: 'Precaución: aún no hay revisiones mensuales registradas. Se recomienda realizar una revisión de seguridad.' });
+  } else {
+    const dias = Math.floor((ahora - ult.t) / 86400000);
+    if (dias >= DIAS_REVISION_MENSUAL) {
+      items.push({ nivel: 'alerta', texto: `Precaución: han pasado ${dias} días desde la última revisión mensual. Se recomienda realizar una revisión de seguridad lo antes posible.` });
+    }
+  }
+  return items.sort((a, b) => (a.nivel === 'critico' ? 0 : 1) - (b.nivel === 'critico' ? 0 : 1));
+}
+
+function actualizarAviso(items) {
+  const clave = items.map(i => i.nivel + i.texto).join('#') + '|' + avisoAbierto;
   if (clave === avisoClave) return;
   avisoClave = clave;
-  const aviso = $('#aviso');
-  if (!criticos.length && !alertas.length) { aviso.hidden = true; return; }
-  aviso.dataset.nivel = criticos.length ? 'critico' : 'alerta';
-  let html = '';
-  if (criticos.length) {
-    html += `<strong>Atención inmediata.</strong> ${criticos.map(c => c.msg).join('. ')}.`;
-    if (criticos.some(c => c.id.startsWith('fuga_gas'))) html += ' Evita flamas y chispas y ventila la zona.';
-  }
-  if (alertas.length) {
-    html += `${html ? ' ' : '<strong>Revisar.</strong> '}${criticos.length ? 'También: ' : ''}${alertas.map(a => a.msg).join('. ')}.`;
-  }
-  aviso.innerHTML = html;
+  const aviso = $('#aviso'), cab = $('#aviso-cab'), lista = $('#aviso-lista');
+  if (!items.length) { aviso.hidden = true; return; }
+  const crit = items.filter(i => i.nivel === 'critico').length, varios = items.length > 1;
+  aviso.dataset.nivel = crit ? 'critico' : 'alerta';
+  $('.aviso-titulo', aviso).textContent = crit ? 'Atención inmediata.' : 'Revisar.';
+  $('.aviso-msg', aviso).textContent = items[0].texto;
+  const resto = items.length - 1;
+  $('.aviso-mas', aviso).textContent = varios ? (avisoAbierto ? 'Ocultar' : `+${resto} ${resto === 1 ? 'aviso' : 'avisos'} más`) : '';
+  $('.aviso-flecha', aviso).hidden = !varios;
+  cab.disabled = !varios;
+  cab.setAttribute('aria-expanded', String(varios && avisoAbierto));
+  lista.innerHTML = items.slice(1).map(i => `<li data-nivel="${i.nivel}"><i></i><span>${esc(i.texto)}</span></li>`).join('');
+  lista.hidden = !(varios && avisoAbierto);
   aviso.hidden = false;
 }
 
-/* ---------- Ciclo de actualización (1 vez por segundo y en cada lectura) ---------- */
+/* ==================================================================
+   11. CICLO DE ACTUALIZACIÓN (1 vez por segundo y en cada lectura)
+   ================================================================== */
+const previo = {};
+const INICIO_PAGINA = Date.now();
+function mensajeLog(p, ev) {
+  const val = ev.valor + (ev.unidad ? ' ' + ev.unidad : '');
+  if (ev.nivel === 'sindato') return p.tipo === 'alarma' ? 'Detector de fuga de gas: sin señal' : `${p.nombre}: sin dato`;
+  if (p.tipo === 'alarma') return 'Detector de fuga de gas: con señal de nuevo';
+  if (ev.nivel === 'ok') return `${p.nombre}: normal (${val})`;
+  return `${p.nombre}: ${ev.nivel === 'alerta' ? 'alerta' : 'crítico'}, valor ${ev.detalle} (${val})`;
+}
+
 function actualizar() {
   const ahora = Date.now();
-  const criticos = [], alertas = [];
 
   for (const p of PARAMETROS) {
     const ev = evaluar(p, ahora);
@@ -763,64 +1449,200 @@ function actualizar() {
       f.aguja.hidden = ev.pct === null;
       if (ev.pct !== null) f.aguja.style.left = (ev.pct * 100) + '%';
     }
-
-    t.el.dataset.nivel = ev.nivel;
+    if (t.el.dataset.nivel !== ev.nivel) t.el.dataset.nivel = ev.nivel;
     t.val.textContent = ev.valor + (ev.unidad ? ' ' + ev.unidad : '');
-    t.el.setAttribute('aria-label', `${p.nombre}: ${t.val.textContent}`);
 
-    if (previo[p.id] !== undefined && previo[p.id] !== ev.clave) registrar(mensajeLog(p, ev), ev.nivel);
-    previo[p.id] = ev.clave;
-
-    if (ev.nivel === 'critico') {
-      criticos.push({ id: p.id + '|' + ev.clave, msg: p.id === 'fuga_gas'
-        ? 'Fuga de gas detectada' + (detalleFuga ? ` en ${detalleFuga}` : '')
-        : `${p.nombre} en estado crítico` });
-    } else if (ev.nivel === 'alerta') {
-      alertas.push({ id: p.id, msg: `${p.nombre} en alerta` });
-    } else if (ev.nivel === 'sindato' && p.id === 'fuga_gas') {
-      alertas.push({ id: p.id, msg: 'Sin señal del detector de fuga de gas' });
+    // Bitácora: cambios de estado. Para el gas, las fugas se anotan por sensor (aplicarGas);
+    // aquí solo se anota cuando el detector pierde o recupera la señal.
+    const antes = previo[p.id];
+    // Al abrir la página, la primera lectura de cada sensor no se anota como "regresó a normal"
+    const arranque = antes === 'sindato' && (ev.nivel === 'ok' || p.tipo === 'alarma') && ahora - INICIO_PAGINA < CONFIG.sinDatoMs;
+    if (antes !== undefined && antes !== ev.clave && !arranque) {
+      const esGas = p.tipo === 'alarma';
+      if (!esGas || ev.clave === 'sindato' || antes === 'sindato') {
+        const tipo = ev.nivel === 'ok' || (esGas && antes === 'sindato') ? 'normal' : 'alerta';
+        registrar(mensajeLog(p, ev), esGas && antes === 'sindato' ? 'ok' : ev.nivel, p.sensor, tipo);
+      }
     }
+    previo[p.id] = ev.clave;
   }
+  pintarGas(ahora);
+  actualizarAviso(calcularAvisos(ahora));
+  muestrearLecturas(ahora);
 
-  actualizarAviso(criticos, alertas);
-  document.title = (criticos.length ? '(!) ' : '') + 'Biodigestor: monitoreo en tiempo real';
-  $('#ultima').textContent = ultimaLectura ? `Última lectura: ${hora(ultimaLectura)}` : 'Sin lecturas todavía';
+  document.title = (sensoresConFuga().length && gasVivo(ahora) ? '(!) ' : '') + 'Biodigestor: monitoreo en tiempo real';
+  $('#ultima').textContent = ultimaLectura ? `Última lectura: ${fmtLarga(ultimaLectura)}, ${fmtHora(ultimaLectura)}` : 'Sin lecturas todavía';
+  pintarUltimasRevisiones();
   dibujarGrafica();
 }
 
-/* ---------- Estado de la conexión ---------- */
+/* ---------- Estado de la conexión con el servidor ---------- */
 const CONEXION = {
   simulado:     ['info',    'Datos simulados'],
   conectando:   ['sindato', 'Conectando'],
   conectado:    ['ok',      'Conectado'],
   desconectado: ['critico', 'Sin conexión']
 };
+let yaConecto = false;
 function setConexion(clave) {
+  if (clave === conexionActual) return;
+  if (clave === 'conectado') {
+    if (yaConecto && conexionActual === 'desconectado') registrar('Conexión con el servidor de datos recuperada', 'ok', 'sistema', 'conexion');
+    yaConecto = true;
+  } else if (clave === 'desconectado' && yaConecto) {
+    registrar('Se perdió la conexión con el servidor de datos', 'alerta', 'sistema', 'conexion');
+  }
+  conexionActual = clave;
   const [nivel, texto] = CONEXION[clave];
   $('#conexion').dataset.nivel = nivel;
   $('#conexion-texto').textContent = texto;
 }
 
-/* ---------- Lista de seguridad ---------- */
+/* ---------- Estado de cada placa (online/offline) ---------- */
+function setPlaca(disp, estado) {
+  if (estado !== 'online' && estado !== 'offline') return;
+  if (estadoPlaca[disp.id] === estado) return;
+  estadoPlaca[disp.id] = estado;
+  // Solo se anota si cambió respecto a lo último que vio este dispositivo
+  if (placasGuardadas[disp.id] !== estado) {
+    registrar(`${disp.nombre}: ${estado === 'offline' ? 'desconectada' : 'en línea'}`, estado === 'offline' ? 'alerta' : 'ok', disp.id, 'conexion');
+    placasGuardadas[disp.id] = estado;
+    almacen.escribir(CLAVE_PLACAS, placasGuardadas);
+  }
+  if (estado === 'offline') {
+    Object.values(disp.campos).forEach(id => { delete lecturas[id]; });   // sus datos pasan a "Sin dato"
+    if (disp.nombresSensores) { gas.ts = null; gasPrevio = []; }
+    actualizar();
+  }
+}
+
+/* ==================================================================
+   12. REVISIONES DE SEGURIDAD
+   Con servidor: se guardan en Supabase (compartidas, con fotos y a nombre
+   de quien inició sesión). Sin servidor (modo simulado): en este dispositivo.
+   ================================================================== */
 const CLAVE_CHECK = 'biodigestor.checklist';
+const CLAVE_REV = 'biodigestor.revisiones.v1';
+const MAX_FOTOS = 6;
 const hoy = () => new Date().toLocaleDateString('sv-SE');
-let check = { fecha: hoy(), marcados: [], ultimaVisita: null };
+let check = { fecha: hoy(), marcados: [] };
+let revisiones = SRV ? [] : almacen.leer(CLAVE_REV, []);
+if (!Array.isArray(revisiones)) revisiones = [];
+let revisionesCargadas = !SRV;
+let fotosSel = [];            // [{ archivo, url }] fotos elegidas para la revisión en curso
+
+const ultimaRevision = tipo => revisiones.filter(r => !tipo || r.tipo === tipo).reduce((a, b) => (!a || b.t > a.t ? b : a), null);
+
+/* Eventos de la bitácora a partir de las revisiones (con servidor) */
+function revisionesComoEventos() {
+  return revisiones.map(r => {
+    const ok = r.items.filter(x => x.ok).length, nf = (r.fotos || []).length;
+    return { t: r.t, nivel: ok === r.items.length ? 'ok' : 'alerta', sensor: 'seguridad', tipo: 'revision',
+      texto: `Revisión ${r.tipo} #${r.n} registrada por ${r.responsable} (${ok} de ${r.items.length} puntos, ${nf} ${nf === 1 ? 'foto' : 'fotos'})` };
+  });
+}
+
+async function cargarRevisiones() {
+  if (!SRV) return;
+  const { data, error } = await sb.from('revisiones').select('*').order('creado', { ascending: true });
+  if (error) { marcarServidor(false); return; }
+  revisiones = data.map((r, i) => ({ n: i + 1, id: r.id, t: Date.parse(r.creado), responsable: r.responsable,
+    tipo: r.tipo, items: Array.isArray(r.items) ? r.items : [], fotos: r.fotos || [] }));
+  revisionesCargadas = true;
+  pintarUltimasRevisiones();
+  pintarBitacora();
+  actualizarAviso(calcularAvisos(Date.now()));
+}
 
 function cargarChecklist() {
+  const g = almacen.leer(CLAVE_CHECK, null);
+  if (g) check = { fecha: hoy(), marcados: g.fecha === hoy() ? (g.marcados || []) : [] };
+}
+function guardarChecklist() { almacen.escribir(CLAVE_CHECK, check); }
+
+function pintarResumenCheck() {
+  $('#resumen-check').textContent = `${check.marcados.length} de ${CHECKLIST.length} puntos marcados`;
+}
+let ultimasClave = '';
+function pintarUltimasRevisiones() {
+  const m = ultimaRevision('mensual'), r = ultimaRevision('rutinaria');
+  const txt = x => x ? `${fmtCorta(x.t)} ${new Date(x.t).getFullYear()}, ${fmtHM(x.t)} · ${esc(x.responsable)} (${hace(x.t)})`
+                     : (revisionesCargadas ? 'Ninguna registrada' : 'Cargando…');
+  const html = `<dt>Última mensual</dt><dd>${txt(m)}</dd><dt>Última rutinaria</dt><dd>${txt(r)}</dd>`;
+  if (html !== ultimasClave) { ultimasClave = html; $('#rev-ultimas').innerHTML = html; }
+}
+
+/* ---------- Fotos: se reducen a 1600 px y JPEG antes de subirlas ---------- */
+async function comprimirFoto(archivo) {
+  let img;
+  try { img = await createImageBitmap(archivo, { imageOrientation: 'from-image' }); }
+  catch (e) {
+    img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = URL.createObjectURL(archivo); });
+  }
+  const f = Math.min(1, 1600 / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * f); c.height = Math.round(img.height * f);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((ok, mal) => c.toBlob(b => (b ? ok(b) : mal(new Error('foto'))), 'image/jpeg', 0.8));
+}
+function pintarFotos() {
+  const n = fotosSel.length;
+  $('#fotos-conteo').textContent = n ? `${n} ${n === 1 ? 'foto' : 'fotos'}${n >= MAX_FOTOS ? ' (máximo)' : ''}` : 'Sin fotos (mínimo 1)';
+  $('#fotos-conteo').dataset.nivel = n ? 'ok' : 'alerta';
+  $('#fotos-prev').innerHTML = fotosSel.map((f, i) =>
+    `<figure><img src="${f.url}" alt="Foto ${i + 1}"><button type="button" data-quitar="${i}" aria-label="Quitar foto ${i + 1}">×</button></figure>`).join('');
+}
+
+function mensajeRev(texto, nivel) {
+  const el = $('#rev-error');
+  el.textContent = texto; el.dataset.nivel = nivel; el.hidden = !texto;
+}
+
+async function registrarRevision() {
+  const boton = $('#btn-visita'), tipo = $('#rev-tipo').value;
+  if (!puedeRegistrar()) { mensajeRev('Con esta cuenta no se pueden registrar revisiones.', 'critico'); return; }
+  if (!check.marcados.length) { mensajeRev('Marca los puntos que revisaste antes de registrar.', 'critico'); return; }
+  if (!fotosSel.length) { mensajeRev('Agrega al menos una foto de la revisión.', 'critico'); return; }
+  const items = CHECKLIST.map((texto, i) => ({ texto, ok: check.marcados.includes(i) }));
+  const nombre = responsable();
+  boton.disabled = true;
   try {
-    const g = JSON.parse(localStorage.getItem(CLAVE_CHECK) || 'null');
-    if (g) check = { fecha: hoy(), marcados: g.fecha === hoy() ? (g.marcados || []) : [], ultimaVisita: g.ultimaVisita || null };
-  } catch (e) { /* sin almacenamiento disponible: se trabaja solo en memoria */ }
+    if (SRV) {
+      const rutas = [], uid = usuarioActual.id;
+      for (let i = 0; i < fotosSel.length; i++) {
+        boton.textContent = `Subiendo fotos (${i + 1} de ${fotosSel.length})…`;
+        const blob = await comprimirFoto(fotosSel[i].archivo);
+        const ruta = `${uid}/${Date.now()}-${i + 1}.jpg`;
+        const { error } = await sb.storage.from('revisiones').upload(ruta, blob, { contentType: 'image/jpeg' });
+        if (error) throw new Error('No se pudo subir una foto: ' + error.message);
+        rutas.push(ruta);
+      }
+      boton.textContent = 'Guardando revisión…';
+      const { error } = await sb.from('revisiones').insert({ tipo, responsable: nombre, items, fotos: rutas });
+      if (error) throw new Error('No se pudo guardar la revisión: ' + error.message);
+      await cargarRevisiones();
+    } else {
+      revisiones.push({ n: revisiones.length + 1, t: Date.now(), responsable: nombre, tipo, items, fotos: fotosSel.map(() => '') });
+      almacen.escribir(CLAVE_REV, revisiones);
+      registrar(revisionesComoEventos().pop().texto, 'ok', 'seguridad', 'revision');
+    }
+    const ultima = revisiones[revisiones.length - 1];
+    mensajeRev(`Revisión ${tipo} #${ultima ? ultima.n : ''} registrada. ¡Gracias!`, 'ok');
+    check.marcados = [];
+    guardarChecklist();
+    $('#checklist').querySelectorAll('input').forEach(c => { c.checked = false; });
+    fotosSel.forEach(f => URL.revokeObjectURL(f.url));
+    fotosSel = [];
+    pintarFotos(); pintarResumenCheck(); pintarUltimasRevisiones();
+    actualizarAviso(calcularAvisos(Date.now()));
+  } catch (e) {
+    mensajeRev(e.message.startsWith('No se pudo') ? e.message : 'No se pudo registrar la revisión. Revisa tu internet e inténtalo de nuevo.', 'critico');
+  } finally {
+    boton.disabled = false;
+    boton.textContent = 'Registrar revisión';
+  }
 }
-function guardarChecklist() {
-  try { localStorage.setItem(CLAVE_CHECK, JSON.stringify(check)); } catch (e) { /* ignorar */ }
-}
-function pintarChecklist() {
-  $('#resumen-check').textContent = `${check.marcados.length} de ${CHECKLIST.length} puntos revisados hoy`;
-  $('#ultima-visita').textContent = check.ultimaVisita
-    ? 'Última visita: ' + new Date(check.ultimaVisita).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
-    : 'Sin visitas registradas';
-}
+
 function construirChecklist() {
   cargarChecklist();
   const ul = $('#checklist');
@@ -831,42 +1653,114 @@ function construirChecklist() {
     cb.checked = check.marcados.includes(i);
     cb.addEventListener('change', () => {
       check.marcados = cb.checked ? [...new Set([...check.marcados, i])] : check.marcados.filter(x => x !== i);
-      guardarChecklist(); pintarChecklist();
+      guardarChecklist(); pintarResumenCheck();
     });
     ul.appendChild(li);
   });
-  $('#btn-visita').addEventListener('click', () => {
-    check.ultimaVisita = Date.now();
-    guardarChecklist(); pintarChecklist();
-    registrar(`Visita registrada: ${check.marcados.length} de ${CHECKLIST.length} puntos revisados`, 'info');
+
+  const sel = $('#rev-tipo');
+  Object.entries(TIPOS_REVISION).forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); });
+  $('#rev-resp').textContent = responsable();
+  const soloVer = !puedeRegistrar();
+  $('#rev-registro').hidden = soloVer;
+  $('#rev-solo-ver').hidden = !soloVer;
+  if (soloVer) $('#rev-nota').textContent = 'Las revisiones y sus fotos se guardan en el servidor y las ve todo el equipo.';
+
+  $('#rev-fotos').addEventListener('change', e => {
+    for (const archivo of e.target.files) {
+      if (fotosSel.length >= MAX_FOTOS) break;
+      if (!archivo.type.startsWith('image/')) continue;
+      fotosSel.push({ archivo, url: URL.createObjectURL(archivo) });
+    }
+    e.target.value = '';
+    mensajeRev('', 'ok');
+    pintarFotos();
   });
-  pintarChecklist();
+  $('#fotos-prev').addEventListener('click', e => {
+    const b = e.target.closest('[data-quitar]');
+    if (!b) return;
+    const [f] = fotosSel.splice(Number(b.dataset.quitar), 1);
+    URL.revokeObjectURL(f.url);
+    pintarFotos();
+  });
+  $('#btn-visita').addEventListener('click', registrarRevision);
+
+  // Ventana de historial
+  const dlg = $('#dlg-historial');
+  $('#btn-historial').addEventListener('click', () => {
+    pintarHistorial(); dlg.showModal();
+    if (SRV) cargarRevisiones().then(pintarHistorial);
+  });
+  $('#dlg-cerrar').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });   // clic fuera de la ventana
+  $('#hist-lista').addEventListener('toggle', e => {                          // fotos al desplegar
+    if (e.target.open && e.target.dataset.fotos === 'pendiente') cargarFotosRevision(e.target);
+  }, true);
+
+  pintarFotos();
+  pintarResumenCheck();
+  pintarUltimasRevisiones();
+}
+
+function pintarHistorial() {
+  const cont = $('#hist-lista');
+  if (!revisiones.length) {
+    cont.innerHTML = `<p class="nota">${revisionesCargadas ? 'Todavía no hay revisiones registradas.' : 'Cargando revisiones…'}</p>`;
+    return;
+  }
+  cont.innerHTML = [...revisiones].sort((a, b) => b.t - a.t).map(r => {
+    const conocidos = r.items.filter(x => x.ok !== null);
+    const ok = conocidos.filter(x => x.ok).length;
+    const nivel = !conocidos.length ? 'sindato' : (ok === r.items.length ? 'ok' : 'alerta');
+    const puntos = conocidos.length ? `${ok}/${r.items.length}` : '—';
+    const nf = (r.fotos || []).length;
+    const items = r.items.map(x => {
+      const nv = x.ok === null ? 'sindato' : (x.ok ? 'ok' : 'critico');
+      return `<li data-nivel="${nv}"><b>${x.ok === null ? '?' : (x.ok ? '✓' : '✗')}</b><span>${esc(x.texto)}</span></li>`;
+    }).join('');
+    const fotos = nf ? `<div class="rev-fotos" aria-label="Fotos de la revisión">${SRV ? 'Cargando fotos…' : `${nf} ${nf === 1 ? 'foto' : 'fotos'} (en modo simulado no se guardan)`}</div>` : '';
+    return `<details class="rev-tarjeta" data-id="${r.id || ''}" data-fotos="${SRV && nf ? 'pendiente' : ''}"><summary>` +
+      `<span class="rev-num">#${r.n}</span>` +
+      `<span class="rev-fecha">${fmtLarga(r.t)} · ${fmtHM(r.t)}</span>` +
+      `<span class="rev-puntos" data-nivel="${nivel}">${puntos}</span>` +
+      `<span class="rev-detalle">${esc(r.responsable)} · ${TIPOS_REVISION[r.tipo] || r.tipo}${nf ? ` · ${nf} ${nf === 1 ? 'foto' : 'fotos'}` : ''}</span>` +
+      `</summary><ul class="rev-items">${items}</ul>${fotos}</details>`;
+  }).join('');
+}
+
+/* Las fotos están en una carpeta privada: se piden enlaces temporales (1 hora) */
+async function cargarFotosRevision(det) {
+  det.dataset.fotos = 'cargando';
+  const r = revisiones.find(x => String(x.id) === det.dataset.id), cont = $('.rev-fotos', det);
+  const { data, error } = await sb.storage.from('revisiones').createSignedUrls(r.fotos, 3600);
+  if (error || !data) { cont.textContent = 'No se pudieron cargar las fotos.'; det.dataset.fotos = 'pendiente'; return; }
+  cont.innerHTML = data.filter(f => f.signedUrl).map((f, i) =>
+    `<a href="${f.signedUrl}" target="_blank" rel="noopener"><img src="${f.signedUrl}" alt="Foto ${i + 1} de la revisión #${r.n}" loading="lazy"></a>`).join('');
+  det.dataset.fotos = 'lista';
 }
 
 /* ==================================================================
-   6. ADAPTADORES DE DATOS
-   Cada uno solo tiene que llamar a recibir({...}) y a setConexion().
+   13. ADAPTADORES DE DATOS
    ================================================================== */
 
 /* --- Simulado --- */
 function crearSimulador() {
-  const s = { temperatura: 36, ph: 7.2, presion: 2.4 };
-  const demo = { fuga: false, tempAlta: false, phBajo: false, sinPh: false };
-  let valvula = 'cerrada';
+  const s = { temperatura: 29, presion: 0.6 };
+  const base = [1210, 1190, 1235];
+  const demo = { fuga: false, tempAlta: false, presionAlta: false, sinTemp: false, placaPresion: false };
   const ruido = a => (Math.random() - 0.5) * 2 * a;
   return {
     demo,
-    alternarValvula() { valvula = valvula === 'cerrada' ? 'abierta' : 'cerrada'; },
     paso(t) {
       const min = t / 60000;
-      const objT = demo.tempAlta ? 48 : 36 + 1.2 * Math.sin(min / 5);
+      const objT = demo.tempAlta ? 38 : 29 + 1.5 * Math.sin(min / 5);
       s.temperatura += (objT - s.temperatura) * (demo.tempAlta ? 0.12 : 0.05) + ruido(0.06);
-      const objPh = demo.phBajo ? 6.1 : 7.2 + 0.12 * Math.sin(min / 8);
-      s.ph += (objPh - s.ph) * 0.1 + ruido(0.008);
-      const objP = valvula === 'abierta' ? 0.9 : 2.5;      // con la válvula abierta baja la presión
-      s.presion += (objP - s.presion) * 0.08 + ruido(0.03);
-      const d = { temperatura: s.temperatura, ph: s.ph, presion: s.presion, valvula_gas: valvula, fuga_gas: demo.fuga };
-      if (demo.sinPh) delete d.ph;                          // simula un sensor que dejó de responder
+      const objP = demo.presionAlta ? 2.6 : 0.6 + 0.3 * Math.sin(min / 7);
+      s.presion += (objP - s.presion) * 0.08 + ruido(0.02);
+      const lect = base.map((b, i) => Math.round(b + ruido(15) + (demo.fuga && i === 2 ? 1300 : 0)));
+      const d = { gas_sensores: lect.map((l, i) => (l >= base[i] + 800 ? 1 : 0)), gas_lecturas: lect };
+      if (!demo.sinTemp) d.temperatura = s.temperatura;
+      if (!demo.placaPresion) d.presion = Math.max(0, s.presion);
       return d;
     }
   };
@@ -876,72 +1770,25 @@ function adaptadorSimulado() {
   const sim = crearSimulador();
   const ahora = Date.now();
   for (let t = ahora - CONFIG.ventanaMaxMin * 60000; t < ahora; t += 5000) guardar(sim.paso(t), t);  // historial inicial
+  gasPrevio = gas.sensores.slice();
   setConexion('simulado');
+  CONFIG.mqtt.dispositivos.forEach(d => { estadoPlaca[d.id] = 'online'; });
   $('#demo').hidden = false;
   $('#demo').querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.demo;
-    if (k === 'valvula') { sim.alternarValvula(); return; }
     sim.demo[k] = !sim.demo[k];
     b.setAttribute('aria-pressed', String(sim.demo[k]));
+    if (k === 'placaPresion') setPlaca(CONFIG.mqtt.dispositivos.find(d => d.id === 'presion'), sim.demo[k] ? 'offline' : 'online');
   }));
   setInterval(() => recibir(sim.paso(Date.now())), CONFIG.intervaloMs);
   recibir(sim.paso(Date.now()));
 }
 
-/* --- HTTP: consulta periódica a una URL que devuelve el JSON --- */
-function adaptadorHttp() {
-  setConexion('conectando');
-  const consultar = async () => {
-    try {
-      const r = await fetch(CONFIG.http.url, { cache: 'no-store' });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      recibir(await r.json());
-      setConexion('conectado');
-    } catch (e) {
-      setConexion('desconectado');
-    }
-  };
-  consultar();
-  setInterval(consultar, CONFIG.intervaloMs);
-}
-
-/* --- WebSocket: el servidor envía el JSON cada vez que hay datos --- */
-function adaptadorWebSocket() {
-  let intentos = 0;
-  const conectar = () => {
-    setConexion('conectando');
-    const ws = new WebSocket(CONFIG.websocket.url);
-    ws.onopen = () => { intentos = 0; setConexion('conectado'); };
-    ws.onmessage = e => { try { recibir(JSON.parse(e.data)); } catch (err) { /* mensaje ilegible */ } };
-    ws.onerror = () => ws.close();
-    ws.onclose = () => {
-      setConexion('desconectado');
-      setTimeout(conectar, Math.min(10000, 1000 * 2 ** intentos++));   // reintenta con espera creciente
-    };
-  };
-  conectar();
-}
-
-/* --- MQTT: cada ESP32 publica sus datos en JSON y su estado (online/offline).
+/* --- MQTT: cada placa publica sus datos en JSON y su estado (online/offline).
        La página se suscribe y los recibe al instante, sin consultar. --- */
 function adaptadorMqtt() {
   const c = CONFIG.mqtt;
-  const estadoPlaca = {};   // id -> 'online' | 'offline'
   setConexion('conectando');
-
-  const manejarEstado = (disp, estado) => {
-    if (estado !== 'online' && estado !== 'offline') return;
-    if (estadoPlaca[disp.id] === estado) return;
-    estadoPlaca[disp.id] = estado;
-    if (estado === 'offline') {
-      registrar(`${disp.nombre}: desconectado`, 'alerta');
-      Object.values(disp.campos).forEach(id => { delete lecturas[id]; });   // sus datos pasan a "Sin dato"
-      if (disp.nombresSensores) detalleFuga = '';
-      actualizar();
-    } else {
-      registrar(`${disp.nombre}: en línea`, 'ok');
-    }
-  };
 
   const conectar = () => {
     const opciones = {
@@ -960,14 +1807,14 @@ function adaptadorMqtt() {
 
     const cliente = window.mqtt.connect(c.url, opciones);
     cliente.on('connect', () => { setConexion('conectado'); cliente.subscribe(Object.keys(rutas), { qos: 1 }); });
-    cliente.on('reconnect', () => setConexion('conectando'));
+    cliente.on('reconnect', () => { if (conexionActual !== 'desconectado') setConexion('conectando'); });
     cliente.on('close', () => setConexion('desconectado'));
     cliente.on('error', e => console.warn('MQTT:', e && e.message));
     cliente.on('message', (tema, payload) => {
       const ruta = rutas[tema];
       if (!ruta) return;
       const texto = payload.toString();
-      if (ruta.tipo === 'estado') { manejarEstado(ruta.disp, texto.trim().toLowerCase()); return; }
+      if (ruta.tipo === 'estado') { setPlaca(ruta.disp, texto.trim().toLowerCase()); return; }
 
       let datos;
       try { datos = JSON.parse(texto); } catch (e) { return; }   // mensaje ilegible: se ignora
@@ -976,13 +1823,17 @@ function adaptadorMqtt() {
       for (const campo in ruta.disp.campos) {
         if (campo in datos) paquete[ruta.disp.campos[campo]] = datos[campo];
       }
-      // Sensores de gas: "sensores":[0,1,0,0] dice cuál detecta fuga
-      if (ruta.disp.nombresSensores && Array.isArray(datos.sensores)) {
-        detalleFuga = datos.sensores
-          .map((s, i) => (Number(s) ? (ruta.disp.nombresSensores[i] || `Sensor ${i + 1}`) : null))
-          .filter(Boolean).join(', ');
+      // Sensores de gas: "sensores":[0,1,0] dice cuál detecta fuga; "lecturas" sus valores
+      if (ruta.disp.nombresSensores) {
+        if (Array.isArray(datos.sensores)) {
+          paquete.gas_sensores = datos.sensores;
+          paquete.gas_lecturas = datos.lecturas;
+        } else if ('fuga' in datos) {           // código viejo con un solo sensor
+          paquete.gas_sensores = [datos.fuga];
+          paquete.gas_lecturas = 'lectura' in datos ? [datos.lectura] : [];
+        }
       }
-      if (estadoPlaca[ruta.disp.id] !== 'online') manejarEstado(ruta.disp, 'online');
+      if (estadoPlaca[ruta.disp.id] !== 'online') setPlaca(ruta.disp, 'online');
       if (Object.keys(paquete).length) recibir(paquete);
     });
   };
@@ -995,87 +1846,198 @@ function adaptadorMqtt() {
   document.head.appendChild(script);
 }
 
-/* --- Blynk: consulta periódica a la API HTTP de Blynk.Cloud.
-       Puede leer varios dispositivos (cada uno con su propio token) y
-       combinar sus pines en una sola lectura del biodigestor. --- */
-function adaptadorBlynk() {
-  const dispositivos = CONFIG.blynk.dispositivos.filter(d => d.token && !d.token.startsWith('PEGA_AQUI'));
-  if (!dispositivos.length) {
-    console.warn('Modo "blynk": agrega al menos un token real en CONFIG.blynk.dispositivos.');
-    setConexion('desconectado');
-    return;
-  }
-  setConexion('conectando');
-
-  const consultarDispositivo = async (dispositivo) => {
-    const idsParametro = Object.keys(dispositivo.pines);           // ej. ['fuga_gas']
-    const pinesUrl = idsParametro.map(id => dispositivo.pines[id]).join('&'); // ej. 'V0&V1'
-    const url = `${CONFIG.blynk.servidor}/external/api/get?token=${dispositivo.token}&${pinesUrl}`;
-    const r = await fetch(url, { cache: 'no-store' });
-    if (!r.ok) throw new Error('Blynk HTTP ' + r.status);
-    const datos = await r.json();
-    // Formato de Blynk:
-    //   un solo pin   -> valor suelto, ej. 1  o  "25.3"
-    //   varios pines  -> objeto con el nombre del pin en minúsculas, ej. {"v1": 0, "v2": 25.3}
-    const paquete = {};
-    if (idsParametro.length === 1 && (datos === null || typeof datos !== 'object')) {
-      paquete[idsParametro[0]] = datos;
-    } else if (datos && typeof datos === 'object' && !Array.isArray(datos)) {
-      const porPin = {};
-      for (const k in datos) porPin[k.toLowerCase()] = datos[k];
-      idsParametro.forEach(id => {
-        const clave = dispositivo.pines[id].toLowerCase();
-        if (clave in porPin) paquete[id] = porPin[clave];   // si falta el pin, ese dato queda "Sin dato"
-      });
-    } else if (Array.isArray(datos)) {
-      idsParametro.forEach((id, i) => { paquete[id] = datos[i]; });
-    }
-    return paquete;
-  };
-
-  const consultarTodos = async () => {
-    // Cada dispositivo se consulta por separado: si una placa falla, las demás siguen mostrando datos.
-    const resultados = await Promise.allSettled(dispositivos.map(consultarDispositivo));
-    const exitosos = resultados.filter(r => r.status === 'fulfilled').map(r => r.value);
-    resultados.forEach((r, i) => {
-      if (r.status === 'rejected') console.warn(`Blynk: falló el dispositivo ${i + 1} (${Object.keys(dispositivos[i].pines).join(', ')}):`, r.reason.message);
-    });
-    if (exitosos.length) {
-      recibir(Object.assign({}, ...exitosos));
-      setConexion('conectado');
-    } else {
-      setConexion('desconectado');
-    }
-  };
-  consultarTodos();
-  setInterval(consultarTodos, CONFIG.intervaloMs);
-}
-
-const ADAPTADORES = { simulado: adaptadorSimulado, http: adaptadorHttp, websocket: adaptadorWebSocket, mqtt: adaptadorMqtt, blynk: adaptadorBlynk };
+const ADAPTADORES = { simulado: adaptadorSimulado, mqtt: adaptadorMqtt };
 
 /* ==================================================================
-   7. ARRANQUE
+   14. ARRANQUE
    ================================================================== */
 function iniciar() {
   construirTags();
   construirFilas();
   construirControlesGrafica();
+  construirBitacora();
   construirChecklist();
   seleccionar(seleccion);
+
+  $('#aviso-cab').addEventListener('click', () => {
+    avisoAbierto = !avisoAbierto;
+    almacen.escribir(CLAVE_AVISO, avisoAbierto);
+    actualizarAviso(calcularAvisos(Date.now()));
+  });
 
   if (!ADAPTADORES[CONFIG.modo]) {
     console.warn(`Modo "${CONFIG.modo}" no existe; se usa "simulado".`);
     CONFIG.modo = 'simulado';
   }
-  registrar(`Monitor iniciado (${NOMBRE_MODO[CONFIG.modo]})`, 'info');
+  if (!SRV) registrar(`Monitor iniciado (${NOMBRE_MODO[CONFIG.modo]})`, 'info', 'sistema', 'sistema');
   ADAPTADORES[CONFIG.modo]();
+  if (SRV) {   // historial compartido: bitácora y gráfica de los últimos 30 min
+    cargarEventos('anteriores');
+    precargarHistorial();
+    setInterval(() => cargarEventos('nuevos'), SRV.consultaMs);
+    cargarRevisiones();
+    setInterval(cargarRevisiones, 5 * 60000);
+  }
 
   actualizar();
   setInterval(actualizar, 1000);
-  if ('ResizeObserver' in window) new ResizeObserver(dibujarGrafica).observe($('#grafica'));
+  if ('ResizeObserver' in window) new ResizeObserver(() => dibujarGrafica()).observe($('#grafica'));
+  window.addEventListener('pagehide', () => { podar(); almacen.escribir(CLAVE_BIT, eventos); });
 }
 
-iniciar();
+/* ==================================================================
+   15. ACCESO (login con Supabase Auth)
+   Las cuentas las crea el administrador en Supabase; nadie puede registrarse solo.
+   ================================================================== */
+/* Cuenta compartida: "grupo", "docentes" o "mantenimiento" (lo que va después del + en el correo) */
+function correoDe(usuario) {
+  const u = usuario.trim().toLowerCase();
+  if (u.includes('@')) return u;                       // también se puede escribir el correo completo
+  const [local, dominio] = CONFIG.cuentas.correoBase.trim().toLowerCase().split('@');
+  return `${local}+${u}@${dominio}`;
+}
+function cuentaActual() {
+  if (!usuarioActual) return 'simulado';
+  const m = /\+([^@]+)@/.exec(usuarioActual.email || '');
+  return m ? m[1].toLowerCase() : (usuarioActual.email || '');
+}
+const nombreCuenta = () => CONFIG.cuentas.nombres[cuentaActual()] || cuentaActual();
+const puedeRegistrar = () => !usuarioActual || CONFIG.cuentas.registranRevisiones.includes(cuentaActual());
+
+/* El nombre de la persona se guarda en ESTE dispositivo (no en la cuenta, porque se comparte) */
+const claveNombre = () => 'biodigestor.nombre.' + (usuarioActual ? usuarioActual.id : 'simulado');
+const nombrePersona = () => String(almacen.leer(claveNombre(), '') || '').trim();
+function nombreUsuario() {
+  if (!usuarioActual) return 'Modo simulado';
+  return nombrePersona() || nombreCuenta();
+}
+// Lo que queda escrito en cada revisión: "Ana López (Mantenimiento)"
+const responsable = () => (usuarioActual ? `${nombreUsuario()} (${nombreCuenta()})` : 'Modo simulado');
+function pintarSesion() {
+  $('#usuario-nombre').textContent = `${nombreUsuario()} · cuenta ${nombreCuenta()}`;
+  $('#rev-resp').textContent = responsable();
+}
+
+function mostrarAcceso(vista, msg) {   // vista: 'login' | 'cargando' | 'error'
+  $('#acceso').hidden = false;
+  $('#app').hidden = true;
+  $('#form-login').hidden = vista !== 'login';
+  $('#acceso-cargando').hidden = vista !== 'cargando';
+  const e = $('#login-error');
+  e.textContent = msg || '';
+  e.hidden = !msg;
+  if (vista === 'login') setTimeout(() => $('#login-correo').focus(), 0);
+}
+
+/* Se pide el nombre en cada dispositivo (y de nuevo tras cerrar sesión) */
+function pedirNombre(obligatorio = true) {
+  return new Promise(resolve => {
+    const dlg = $('#dlg-nombre'), inp = $('#nombre-inp'), err = $('#nombre-err');
+    if (dlg.open) return resolve();
+    inp.value = nombrePersona();
+    err.hidden = true;
+    $('#form-nombre').onsubmit = e => {
+      e.preventDefault();
+      const nombre = inp.value.trim().replace(/\s+/g, ' ');
+      if (nombre.length < 3) { err.textContent = 'Escribe tu nombre completo.'; err.hidden = false; return; }
+      almacen.escribir(claveNombre(), nombre);
+      dlg.close();
+      resolve();
+    };
+    dlg.oncancel = e => { if (obligatorio) e.preventDefault(); else resolve(); };
+    dlg.showModal();
+  });
+}
+
+/* Cambio de contraseña (también se usa con el enlace de recuperación por correo) */
+function abrirCambioClave(obligatorio) {
+  const dlg = $('#dlg-clave'), err = $('#clave-err');
+  if (dlg.open) return;
+  err.hidden = true;
+  $('#clave-cancelar').hidden = obligatorio;
+  $('#clave-cancelar').onclick = () => dlg.close();
+  dlg.oncancel = e => { if (obligatorio) e.preventDefault(); };
+  $('#form-clave').onsubmit = async e => {
+    e.preventDefault();
+    const a = $('#clave-1').value, b = $('#clave-2').value;
+    const fallo = t => { err.textContent = t; err.hidden = false; };
+    if (a.length < 8) return fallo('La contraseña debe tener al menos 8 caracteres.');
+    if (a !== b) return fallo('Las contraseñas no coinciden.');
+    const { error } = await sb.auth.updateUser({ password: a });
+    if (error) return fallo(/different|same/i.test(error.message) ? 'La nueva contraseña debe ser distinta de la anterior.' : 'No se pudo cambiar la contraseña. Inténtalo de nuevo.');
+    $('#form-clave').reset();
+    dlg.close();
+    registrar('Contraseña actualizada', 'ok', 'sistema', 'sistema');
+  };
+  dlg.showModal();
+}
+
+let iniciado = false;
+async function entrar(usuario) {
+  usuarioActual = usuario;
+  mostrarAcceso('cargando');
+  if (!nombrePersona()) await pedirNombre();
+  // Credenciales MQTT de solo lectura: solo se entregan con sesión iniciada
+  const { data, error } = await sb.from('ajustes').select('valor').eq('clave', 'mqtt_pagina').maybeSingle();
+  if (error || !data) {
+    mostrarAcceso('login', error
+      ? 'No se pudo conectar con el servidor. Revisa tu internet y vuelve a intentar.'
+      : 'Tu cuenta no tiene acceso a los datos del biodigestor. Pide ayuda al administrador.');
+    return;
+  }
+  CONFIG.mqtt.usuario = data.valor.usuario;
+  CONFIG.mqtt.contrasena = data.valor.contrasena;
+  $('#acceso').hidden = true;
+  $('#app').hidden = false;
+  if (!iniciado) { iniciado = true; iniciar(); }
+  pintarSesion();
+}
+
+async function arrancar() {
+  if (CONFIG.modo !== 'mqtt') {   // modo simulado: sin login ni servidor
+    $('#acceso').hidden = true;
+    $('#app').hidden = false;
+    $('#sesion').hidden = true;
+    iniciar();
+    return;
+  }
+  if (!window.supabase) {
+    mostrarAcceso('error', 'No se pudo cargar el sistema de acceso. Revisa tu internet y recarga la página.');
+    return;
+  }
+  sb = window.supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.llave);
+  sb.auth.onAuthStateChange(evento => {
+    // (no se llaman otras funciones de Supabase aquí dentro; se difieren con setTimeout)
+    if (evento === 'PASSWORD_RECOVERY') setTimeout(() => abrirCambioClave(true), 300);
+    if (evento === 'SIGNED_OUT') location.reload();
+  });
+  $('#form-login').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#login-btn');
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: correoDe($('#login-correo').value), password: $('#login-clave').value
+    });
+    btn.disabled = false; btn.textContent = 'Entrar';
+    if (error) {
+      mostrarAcceso('login', /invalid/i.test(error.message) ? 'Usuario o contraseña incorrectos.'
+        : 'No se pudo iniciar sesión. Revisa tu internet e inténtalo de nuevo.');
+      return;
+    }
+    $('#login-clave').value = '';
+    entrar(data.user);
+  });
+  // Al salir se borra el nombre de este dispositivo, para que la siguiente persona escriba el suyo
+  $('#btn-salir').addEventListener('click', () => { try { localStorage.removeItem(claveNombre()); } catch (e) {} sb.auth.signOut(); });
+  $('#btn-nombre').addEventListener('click', () => pedirNombre(false).then(pintarSesion));
+
+  mostrarAcceso('cargando');
+  const { data } = await sb.auth.getSession();
+  if (data.session) entrar(data.session.user);
+  else mostrarAcceso('login');
+}
+
+arrancar();
 })();
 </script>
 </body>
